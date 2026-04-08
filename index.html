@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BMC54 — Archi Takt Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0e13;--surface:#13171e;--surface2:#191e27;--border:#232b38;
+  --text:#dde3ed;--muted:#566070;--accent:#f0a500;--green:#00c9a7;--red:#ff4d6d;--blue:#4d96ff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;
+     height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── HEADER ── */
+header{background:var(--surface);border-bottom:2px solid var(--accent);
+  padding:10px 20px;display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap}
+header h1{font-size:1.1rem;font-weight:800;color:var(--accent);letter-spacing:.07em;
+  text-transform:uppercase;white-space:nowrap}
+.tagline{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.1em}
+.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* ── TABS ── */
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:stretch;flex-shrink:0;padding:0 16px;gap:2px}
+.tab{padding:8px 20px;font-size:.75rem;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;cursor:pointer;border-bottom:3px solid transparent;
+  color:var(--muted);transition:all .15s;display:flex;align-items:center;gap:7px;
+  margin-bottom:-1px;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-icon{font-size:.9rem}
+
+/* ── TOOLBAR ── */
+.toolbar{background:var(--surface2);border-bottom:1px solid var(--border);
+  padding:7px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.tg{display:flex;align-items:center;gap:5px}
+.tg label{font-size:.62rem;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.07em;white-space:nowrap}
+select,input[type=date],input[type=number],input[type=text]{
+  background:var(--bg);border:1px solid var(--border);color:var(--text);
+  padding:3px 7px;border-radius:4px;font-family:'IBM Plex Mono',monospace;
+  font-size:.72rem;outline:none}
+select:focus,input:focus{border-color:var(--accent)}
+.btn{background:var(--accent);color:#000;border:none;padding:4px 13px;border-radius:4px;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:.7rem;cursor:pointer;
+  text-transform:uppercase;letter-spacing:.04em;transition:opacity .15s;white-space:nowrap}
+.btn:hover{opacity:.82}
+.btn-ghost{background:transparent;color:var(--green);border:1px solid var(--green)}
+.btn-ghost:hover{background:var(--green);color:#000;opacity:1}
+.btn-sm{padding:3px 10px;font-size:.65rem}
+.btn-danger{background:#c0392b;color:#fff}
+.btn-danger:hover{opacity:.85}
+
+/* ── LAYOUT ── */
+.main{display:flex;flex:1;overflow:hidden;min-height:0}
+
+/* ── SIDE PANEL (trade list) ── */
+.side{width:200px;flex-shrink:0;border-right:1px solid var(--border);
+  background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+.side-hdr{padding:0 10px;height:48px;background:var(--surface2);
+  border-bottom:2px solid var(--border);display:flex;align-items:center;flex-shrink:0}
+.side-hdr span{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.side-body{flex:1;overflow-y:auto;overflow-x:hidden}
+.trade-row{display:flex;align-items:center;gap:7px;padding:0 8px;
+  border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;
+  min-height:32px;height:32px}
+.trade-row:hover{background:var(--surface2)}
+.trade-row.hl{background:rgba(240,165,0,.1);border-left:2px solid var(--accent)}
+.tr-num{font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:var(--muted);
+  width:15px;text-align:right;flex-shrink:0}
+.tr-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.tr-name{font-size:.66rem;line-height:1.25;color:var(--text)}
+
+/* ── CHART WRAP ── */
+.chart-wrap{flex:1;overflow:auto;position:relative}
+.chart-inner{display:inline-block;position:relative;min-height:100%}
+
+/* ── SHARED CHART COMPONENTS ── */
+/* Sticky top header */
+.col-header{position:sticky;top:0;z-index:40;display:flex;
+  background:var(--surface2);border-bottom:2px solid var(--border)}
+.ch-corner{flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:var(--surface2);border-right:2px solid var(--border);
+  position:sticky;left:0;z-index:45}
+.ch-corner span{font-size:.56rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;text-align:center;padding:0 4px;line-height:1.3}
+.wk-cell{flex-shrink:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;border-right:1px solid rgba(255,255,255,.04)}
+.wk-cell .wd{font-family:'IBM Plex Mono',monospace;font-size:.56rem;color:var(--muted)}
+.wk-cell .wn{font-family:'IBM Plex Mono',monospace;font-size:.47rem;color:rgba(86,96,112,.6);margin-top:1px}
+.wk-cell.today-wk .wd{color:var(--accent);font-weight:600}
+.wk-cell.today-wk{background:rgba(240,165,0,.05)}
+
+/* week bg stripes & today line shared */
+.wbg{position:absolute;top:0;bottom:0;border-right:1px solid rgba(255,255,255,.03);pointer-events:none;z-index:1}
+.wbg.today-wk{background:rgba(240,165,0,.04)}
+.today-line{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);z-index:18;pointer-events:none}
+.today-tag{position:absolute;top:2px;left:3px;background:var(--accent);color:#000;
+  font-family:'IBM Plex Mono',monospace;font-size:.47rem;font-weight:700;
+  padding:1px 4px;border-radius:2px;white-space:nowrap;pointer-events:none}
+
+/* ── TAB 1: TRADE VIEW ── */
+/* Each row = one trade, wagons = level segments flowing right */
+.trade-band{display:flex;border-bottom:1px solid var(--border);position:relative}
+.t-strip{position:relative;flex-shrink:0;overflow:visible}
+
+/* segment: trade view */
+.seg{position:absolute;top:3px;bottom:3px;border-radius:4px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  border:1.5px solid rgba(255,255,255,.15);overflow:hidden;user-select:none;z-index:10;
+  transition:filter .12s,transform .1s,box-shadow .12s}
+.seg:hover{filter:brightness(1.18);transform:scaleY(1.07);z-index:25;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+.seg .s-lvl{font-family:'IBM Plex Mono',monospace;font-size:.55rem;font-weight:700;
+  color:rgba(0,0,0,.85);pointer-events:none;line-height:1}
+.seg .s-dur{font-family:'IBM Plex Mono',monospace;font-size:.45rem;
+  color:rgba(0,0,0,.55);pointer-events:none;line-height:1;margin-top:1px}
+
+/* ── TAB 2: TAKT PLAN VIEW ── */
+/* Each row = one Block/Level, wagons = trades placed on timeline */
+.lv-row{display:flex;border-bottom:1px solid var(--border);position:relative}
+.lv-label-block{flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border-right:1px solid var(--border);
+  font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--muted);
+  position:sticky;z-index:11}
+.lv-label-lvl{flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border-right:2px solid var(--border);
+  font-family:'IBM Plex Mono',monospace;font-size:.63rem;color:var(--text);
+  position:sticky;z-index:11}
+.lv-strip{position:relative;flex-shrink:0;overflow:visible}
+
+/* wagon: takt plan view — trade colored, label = trade name */
+.wagon{position:absolute;top:3px;bottom:3px;border-radius:4px;cursor:pointer;
+  display:flex;align-items:center;padding:0 5px;gap:3px;
+  border:1.5px solid rgba(255,255,255,.18);overflow:hidden;user-select:none;z-index:10;
+  transition:filter .12s,transform .1s,box-shadow .12s}
+.wagon:hover{filter:brightness(1.18);transform:scaleY(1.07);z-index:25;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+.wagon .wg-num{font-family:'IBM Plex Mono',monospace;font-size:.55rem;font-weight:700;
+  color:rgba(0,0,0,.85);pointer-events:none;flex-shrink:0;line-height:1}
+.wagon .wg-name{font-family:'IBM Plex Mono',monospace;font-size:.5rem;
+  color:rgba(0,0,0,.65);pointer-events:none;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;line-height:1}
+
+/* block divider row in takt plan view */
+.blk-div{height:26px;display:flex;position:sticky;left:0;z-index:12}
+.blk-div-lbl{display:flex;align-items:center;gap:8px;
+  background:var(--surface2);border-bottom:1px solid var(--accent);
+  border-right:1px solid var(--accent);padding:0 12px;position:sticky;left:0;z-index:13;flex-shrink:0}
+.blk-div-lbl span{font-size:.72rem;font-weight:800;color:var(--accent);
+  letter-spacing:.1em;text-transform:uppercase}
+.blk-div-lbl small{font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--muted)}
+.blk-div-fill{flex:1;background:var(--surface2);border-bottom:1px solid var(--accent)}
+
+/* STATUS shared */
+.st-not-started{opacity:.88}
+.st-in-progress{box-shadow:0 0 0 2px var(--green),0 2px 10px rgba(0,201,167,.25)}
+.st-completed{opacity:.32;filter:grayscale(.6)}
+.st-delayed{box-shadow:0 0 0 2px var(--red),0 2px 10px rgba(255,77,109,.25)}
+.dimmed{opacity:.06!important;filter:grayscale(1)!important;pointer-events:none!important}
+
+/* arrow connector */
+.seg-arrow{position:absolute;top:50%;width:5px;height:5px;
+  border-top:1.5px solid rgba(255,255,255,.22);border-right:1.5px solid rgba(255,255,255,.22);
+  transform:translateY(-50%) rotate(45deg);pointer-events:none;z-index:8}
+
+/* ── LEGEND BAR (takt plan view) ── */
+.legend-bar{background:var(--surface);border-top:1px solid var(--border);
+  padding:5px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex-shrink:0}
+.leg-item{display:inline-flex;align-items:center;gap:4px;
+  font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:var(--text);
+  cursor:pointer;padding:2px 6px;border-radius:3px;border:1px solid transparent;
+  transition:border-color .12s}
+.leg-item:hover{border-color:var(--border)}
+.leg-item.hl{border-color:var(--accent)}
+.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* ── POPUP ── */
+.popup{position:fixed;z-index:300;background:var(--surface);
+  border:1px solid var(--border);border-top:3px solid var(--accent);
+  border-radius:8px;padding:16px;width:324px;
+  box-shadow:0 24px 64px rgba(0,0,0,.85);display:none}
+.popup.open{display:block}
+.pop-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px}
+.ph-dot{width:14px;height:14px;border-radius:3px;flex-shrink:0;margin-top:2px}
+.ph-info{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ph-trade{font-size:.78rem;font-weight:700;line-height:1.3}
+.ph-loc{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--muted)}
+.frow{margin-bottom:9px}
+.frow label{display:block;font-size:.58rem;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.frow input,.frow select{width:100%}
+.frow.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.frow.two>.frow{margin-bottom:0}
+.pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;
+  border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:.55rem;
+  font-weight:600;cursor:pointer;border:1.5px solid var(--border);color:var(--muted);
+  transition:all .12s;text-transform:uppercase;letter-spacing:.05em}
+.pill:hover{border-color:var(--text)}
+.pill.sel-not-started{border-color:var(--muted);background:rgba(86,96,112,.2);color:var(--muted)}
+.pill.sel-in-progress{border-color:var(--green);background:rgba(0,201,167,.15);color:var(--green)}
+.pill.sel-completed  {border-color:#6b7280;background:rgba(107,114,128,.15);color:#9ca3af}
+.pill.sel-delayed    {border-color:var(--red);background:rgba(255,77,109,.15);color:var(--red)}
+.pill-dot{width:6px;height:6px;border-radius:50%}
+.pop-note{font-family:'IBM Plex Mono',monospace;font-size:.57rem;color:var(--muted);
+  background:rgba(240,165,0,.06);border:1px solid rgba(240,165,0,.18);
+  border-radius:4px;padding:6px 8px;margin-bottom:9px;line-height:1.5}
+.pop-note b{color:var(--accent)}
+.pop-btns{display:flex;gap:7px;justify-content:flex-end;margin-top:12px}
+
+/* ── STATS BAR ── */
+.statsbar{background:var(--surface2);border-top:1px solid var(--border);
+  padding:4px 18px;display:flex;gap:18px;align-items:center;flex-shrink:0;
+  font-family:'IBM Plex Mono',monospace;font-size:.61rem;color:var(--muted)}
+.stat b{color:var(--text);font-weight:600}
+
+
+/* ── SCHEDULE VIEW ── */
+.sv-wrap{flex:1;overflow:auto;display:none;flex-direction:column}
+.sv-wrap.active{display:flex}
+.sv-floor-bar{background:var(--surface2);border-bottom:1px solid var(--border);
+  padding:6px 12px;display:flex;gap:5px;flex-wrap:wrap;align-items:center;flex-shrink:0}
+.sv-fbtn{font-family:'IBM Plex Mono',monospace;font-size:.62rem;padding:3px 9px;
+  border-radius:3px;border:1px solid var(--border);cursor:pointer;
+  background:var(--bg);color:var(--muted);transition:all .12s}
+.sv-fbtn:hover{border-color:var(--text);color:var(--text)}
+.sv-fbtn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.sv-table-wrap{flex:1;overflow:auto}
+.sv-table{border-collapse:collapse;font-size:.62rem;white-space:nowrap;min-width:100%}
+/* Header rows */
+.sv-table thead tr.sv-hdr1 th{background:var(--surface2);border:1px solid var(--border);
+  padding:5px 8px;text-align:center;font-size:.65rem;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;position:sticky;top:0;z-index:30}
+.sv-table thead tr.sv-hdr2 th{background:var(--surface2);border:1px solid var(--border);
+  padding:3px 6px;text-align:center;font-family:'IBM Plex Mono',monospace;
+  font-size:.55rem;color:var(--muted);position:sticky;top:34px;z-index:29}
+/* Sticky left columns */
+.sv-col-blk{position:sticky;left:0;z-index:20;background:var(--surface);
+  border:1px solid var(--border);padding:0 8px;text-align:center;
+  font-family:'IBM Plex Mono',monospace;font-size:.62rem;font-weight:700;
+  color:var(--accent);min-width:52px}
+.sv-col-lvl{position:sticky;left:52px;z-index:20;background:var(--surface);
+  border:1px solid var(--border);padding:0 8px;text-align:center;
+  font-family:'IBM Plex Mono',monospace;font-size:.63rem;font-weight:600;
+  color:var(--text);min-width:48px}
+/* Body rows */
+.sv-table tbody tr{border-bottom:1px solid var(--border)}
+.sv-table tbody tr:hover td{background:rgba(255,255,255,.025)}
+.sv-table tbody tr:hover td.sv-col-blk,
+.sv-table tbody tr:hover td.sv-col-lvl{background:var(--surface2)}
+/* Data cell */
+.sv-cell{border:1px solid var(--border);padding:4px 6px;min-width:88px;
+  vertical-align:top;cursor:pointer;transition:background .1s}
+.sv-cell:hover{background:rgba(255,255,255,.06)!important}
+.sv-cell-inner{display:flex;flex-direction:column;gap:2px}
+/* Status badge */
+.sv-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;
+  border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:.52rem;
+  font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:1px}
+.sv-badge.complete {background:rgba(0,201,167,.22);color:#00c9a7;border:1px solid rgba(0,201,167,.4)}
+.sv-badge.in-progress{background:rgba(77,150,255,.22);color:#4d96ff;border:1px solid rgba(77,150,255,.4)}
+.sv-badge.not-started{background:rgba(86,96,112,.18);color:#8a9ab0;border:1px solid rgba(86,96,112,.3)}
+.sv-badge.delayed   {background:rgba(255,77,109,.22);color:#ff4d6d;border:1px solid rgba(255,77,109,.4)}
+.sv-date-row{display:flex;gap:4px;align-items:center;
+  font-family:'IBM Plex Mono',monospace;font-size:.53rem;color:var(--muted)}
+.sv-date-lbl{font-size:.48rem;text-transform:uppercase;color:rgba(86,96,112,.7);
+  letter-spacing:.05em;flex-shrink:0}
+.sv-date-val{color:var(--text);font-size:.56rem}
+.sv-variance{font-family:'IBM Plex Mono',monospace;font-size:.5rem;padding:0 4px;
+  border-radius:2px;font-weight:600}
+.sv-variance.pos{color:#ff4d6d;background:rgba(255,77,109,.12)}
+.sv-variance.neg{color:#00c9a7;background:rgba(0,201,167,.12)}
+.sv-variance.zero{color:var(--muted)}
+/* Trade header color dot */
+.sv-trade-hdr{display:flex;flex-direction:column;align-items:center;gap:3px}
+.sv-trade-dot{width:8px;height:8px;border-radius:2px}
+/* Empty cell */
+.sv-empty{background:rgba(0,0,0,.15);cursor:default}
+.sv-empty:hover{background:rgba(0,0,0,.15)!important}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>BMC54 · Archi Takt Plan</h1>
+    <div class="tagline">POST-CON · LOCATION–TIME MATRIX · 30 TRADES</div>
+  </div>
+</header>
+
+<!-- ── TABS ── -->
+<div class="tabs">
+  <div class="tab active" id="tab-trade" onclick="switchTab('trade')">
+    <span class="tab-icon">≡</span> Trade View
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">Y: Trade · X: Time</span>
+  </div>
+  <div class="tab" id="tab-takt" onclick="switchTab('takt')">
+    <span class="tab-icon">▦</span> Takt Plan View
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">Y: Block/Level · X: Time</span>
+  </div>
+  <div class="tab" id="tab-schedule" onclick="switchTab('schedule')">
+    <span class="tab-icon">▤</span> Schedule View
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:.55rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">Level × Trade grid</span>
+  </div>
+</div>
+
+<!-- ── TOOLBAR ── -->
+<div class="toolbar">
+  <div class="tg"><label>Block</label>
+    <select id="selBlock" onchange="render()">
+      <option value="ALL">All Blocks</option>
+      <option>138A</option><option>138B</option><option>140A</option><option>140B</option><option>140C</option>
+    </select>
+  </div>
+  <div class="tg"><label>Status</label>
+    <select id="selStatus" onchange="render()">
+      <option value="ALL">All Status</option>
+      <option value="not-started">Not Started</option>
+      <option value="in-progress">In Progress</option>
+      <option value="completed">Completed</option>
+      <option value="delayed">Delayed</option>
+    </select>
+  </div>
+  <div class="tg"><label>Weeks</label>
+    <input type="number" id="weeksShown" value="80" min="8" max="200" style="width:58px" onchange="render()">
+  </div>
+  <div class="tg"><label>Col px</label>
+    <input type="number" id="colPx" value="42" min="20" max="140" style="width:58px" onchange="render()">
+  </div>
+  <div class="tg"><label>Row px</label>
+    <input type="number" id="rowPx" value="32" min="20" max="80" style="width:58px" onchange="render()">
+  </div>
+  <div style="width:1px;height:20px;background:var(--border);flex-shrink:0"></div>
+  <button class="btn btn-ghost btn-sm" onclick="openSettings('block')">⚙ Block Dates</button>
+  <button class="btn btn-ghost btn-sm" onclick="openSettings('trade')">⚙ Trade Durations</button>
+  <button class="btn btn-ghost btn-sm" onclick="resetView()">Reset</button>
+  <div style="width:1px;height:20px;background:var(--border);flex-shrink:0"></div>
+  <button class="btn btn-sm" onclick="exportToExcel()" style="background:#1d6f42;color:#fff"
+    title="Export all segment status, dates and notes to Excel">⬇ Export xlsx</button>
+  <button class="btn btn-ghost btn-sm" onclick="document.getElementById('xlsxImport').click()"
+    title="Import status updates from a previously exported Excel file">⬆ Import xlsx</button>
+  <input type="file" id="xlsxImport" accept=".xlsx,.xls" style="display:none" onchange="importFromExcel(event)">
+</div>
+
+<!-- ── SETTINGS MODAL ── -->
+<div id="settingsOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);
+    border-radius:8px;width:520px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;
+    box-shadow:0 24px 64px rgba(0,0,0,.85)">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <div style="font-size:.95rem;font-weight:800;flex:1" id="settingsTitle">Settings</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeSettings()">Close</button>
+      <button class="btn btn-sm" onclick="applySettings()">Apply & Rebuild</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 20px" id="settingsBody"></div>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<!-- Trade legend bar (Takt Plan View only) -->
+<div id="legendBar" style="display:none;background:var(--surface);border-bottom:1px solid var(--border);
+  padding:5px 14px;flex-wrap:wrap;gap:5px;align-items:center;flex-shrink:0"></div>
+
+<div class="main">
+  <!-- Side panel (Trade View only) -->
+  <div class="side" id="sidePanel">
+    <div class="side-hdr"><span>Trade Sequence</span></div>
+    <div class="side-body" id="sideList"></div>
+  </div>
+  <!-- Chart area (Trade + Takt views) -->
+  <div class="chart-wrap" id="chartWrap">
+    <div class="chart-inner" id="chartInner"></div>
+  </div>
+  <!-- Schedule view panel -->
+  <div class="sv-wrap" id="svWrap">
+    <div class="sv-floor-bar" id="svFloorBar"></div>
+    <div class="sv-table-wrap">
+      <table class="sv-table" id="svTable">
+        <thead id="svThead"></thead>
+        <tbody id="svTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- Stats bar -->
+<div class="statsbar">
+  <div class="stat">Wagons: <b id="stTotal">0</b></div>
+  <div class="stat" style="color:var(--green)">In Progress: <b id="stWip">0</b></div>
+  <div class="stat" style="color:#9ca3af">Completed: <b id="stDone">0</b></div>
+  <div class="stat" style="color:var(--red)">Delayed: <b id="stDelay">0</b></div>
+  <div class="stat">Not Started: <b id="stNs">0</b></div>
+</div>
+
+<!-- ── POPUP EDITOR (shared by both views) ── -->
+<div class="popup" id="popup">
+  <div class="pop-head">
+    <div class="ph-dot" id="phDot"></div>
+    <div class="ph-info">
+      <div class="ph-trade" id="phTrade"></div>
+      <div class="ph-loc"   id="phLoc"></div>
+    </div>
+  </div>
+
+  <div class="pop-note" id="popNote"></div>
+
+  <div class="frow">
+    <label>Status</label>
+    <div class="pills">
+      <div class="pill" id="pi-not-started" onclick="setSt('not-started')">
+        <div class="pill-dot" style="background:var(--muted)"></div>Not Started
+      </div>
+      <div class="pill" id="pi-in-progress" onclick="setSt('in-progress')">
+        <div class="pill-dot" style="background:var(--green)"></div>In Progress
+      </div>
+      <div class="pill" id="pi-completed" onclick="setSt('completed')">
+        <div class="pill-dot" style="background:#6b7280"></div>Done
+      </div>
+      <div class="pill" id="pi-delayed" onclick="setSt('delayed')">
+        <div class="pill-dot" style="background:var(--red)"></div>Delayed
+      </div>
+    </div>
+  </div>
+
+  <div class="frow two">
+    <div class="frow">
+      <label>Start Date</label>
+      <input type="date" id="popStart" oninput="liveCalc()">
+    </div>
+    <div class="frow">
+      <label>Duration (days)</label>
+      <input type="number" id="popDur" min="1" max="365" oninput="liveCalc()">
+    </div>
+  </div>
+
+  <div class="frow two">
+    <div class="frow">
+      <label>End Date</label>
+      <input type="text" id="popEnd" readonly style="color:var(--muted);cursor:default">
+    </div>
+    <div class="frow">
+      <label>Next Level starts</label>
+      <input type="text" id="popNext" readonly style="color:var(--accent);cursor:default">
+    </div>
+  </div>
+
+  <div class="frow">
+    <label>Notes</label>
+    <input type="text" id="popNotes" placeholder="Optional…">
+  </div>
+
+  <div class="pop-btns">
+    <button class="btn btn-sm btn-danger" onclick="deleteSeg()">Delete</button>
+    <button class="btn btn-sm btn-ghost" onclick="closePopup()">Cancel</button>
+    <button class="btn btn-sm" onclick="saveSeg()">Save</button>
+  </div>
+</div>
+
+<script>
+
+
+// ═══════════════════════════════════════════════════════════════
+//  CONSTANTS & MASTER DATA
+// ═══════════════════════════════════════════════════════════════
+const TRADES = [
+  "Ceiling Skimming (Wet Area)",
+  "Concealed Water Piping",
+  "Sanitary Piping",
+  "Concealed Electrical Piping",
+  "LPCP",
+  "MS Door Frame",
+  "Waterproofing (Façade Wall)",
+  "Plastering / Skimming",
+  "Non-Cast In Window & Bifold Door",
+  "Waterproofing (Wet Area)",
+  "Wall Tiling (KIT/Bath)",
+  "Floor Tiling (Kit/Bath/SY & HS)",
+  "Drywall w/ UPVC Door Frame & Elec",
+  "Floor Screeding (Bedrooms)",
+  "Painting (1st Coat - Sealer)",
+  "Vinyl Flooring",
+  "UPVC Skirting",
+  "Toilet Box Up",
+  "UPVC Door Frame (Bath)",
+  "Main Gate",
+  "Main Door",
+  "DB Closet",
+  "UPVC Doors",
+  "Sanitary Wares",
+  "Glazing",
+  "Electrical Fittings",
+  "HS Door Frame & Vent Plate",
+  "Internal Clothes Rack",
+  "External Clothes Rack",
+  "Final Painting"
+];
+
+const COLORS = [
+  '#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF6FC8',
+  '#FFA552','#40E0D0','#C77DFF','#00C5E3','#FF3CAC',
+  '#AAFF00','#FF9E00','#48CAE4','#E63946','#06D6A0',
+  '#FFB703','#EE6055','#80FFDB','#FFC8DD','#BDE0FE',
+  '#FFAFCC','#CDB4DB','#F4A261','#2EC4B6','#E9C46A',
+  '#F77F00','#FF595E','#1982C4','#8AC926','#D4A5FF'
+];
+
+const BLOCK_LEVELS = {
+  '138A': range(2,49),
+  '138B': range(2,41),
+  '140A': range(1,41),
+  '140B': range(1,49),
+  '140C': range(1,50),
+};
+function range(a,b){const r=[];for(let i=a;i<=b;i++)r.push(String(i).padStart(2,'0'));return r;}
+
+// ═══════════════════════════════════════════════════════════════
+//  SINGAPORE PUBLIC HOLIDAYS 2024–2027
+//  Source: MOM Singapore official calendar
+// ═══════════════════════════════════════════════════════════════
+const SG_HOLIDAYS = new Set([
+  // 2024
+  '2024-01-01','2024-02-10','2024-02-11','2024-02-12',
+  '2024-03-29','2024-04-10','2024-05-01','2024-05-22',
+  '2024-06-17','2024-08-09','2024-10-31','2024-12-25',
+  // 2025
+  '2025-01-01','2025-01-29','2025-01-30',
+  '2025-03-31','2025-04-18','2025-05-01','2025-05-12',
+  '2025-06-07','2025-08-09','2025-10-20','2025-12-25',
+  // 2026
+  '2026-01-01','2026-02-17','2026-02-18',
+  '2026-04-03','2026-05-01','2026-05-27','2026-06-01',
+  '2026-05-14','2026-08-10','2026-11-09','2026-12-25',
+  // 2027
+  '2027-01-01','2027-02-06','2027-02-07',
+  '2027-03-26','2027-04-02','2027-05-01','2027-05-17',
+  '2027-06-21','2027-08-09','2027-10-29','2027-12-25',
+]);
+
+// ── Working-day helpers (6-day week: Mon–Sat, skip Sundays & SG holidays) ──
+function isWorkingDay(d){
+  if(d.getDay()===0) return false;               // Sunday
+  return !SG_HOLIDAYS.has(dStr(d));              // not a public holiday
+}
+
+// Add N working days to date d (returns new Date)
+function addWorkDays(d, n){
+  let cur = new Date(d);
+  let rem = Math.abs(n);
+  const step = n >= 0 ? 1 : -1;
+  while(rem > 0){
+    cur.setDate(cur.getDate() + step);
+    if(isWorkingDay(cur)) rem--;
+  }
+  return cur;
+}
+
+// Count working days between two date strings (a to b, exclusive of start)
+function workDaysBetween(a, b){
+  const da = parseDate(a), db = parseDate(b);
+  if(db <= da) return 0;
+  let count = 0, cur = new Date(da);
+  while(true){
+    cur.setDate(cur.getDate()+1);
+    if(cur >= db) break;
+    if(isWorkingDay(cur)) count++;
+  }
+  // include the start day if it's a working day? No — use elapsed days for positioning
+  return count;
+}
+
+// Calendar days between two date strings (for X-axis pixel positioning)
+function calDaysBetween(a, b){
+  return Math.round((parseDate(b) - parseDate(a)) / 86400000);
+}
+
+// Advance date by N working days, return date string
+function wdStr(start, workDays){
+  return dStr(addWorkDays(parseDate(start), workDays));
+}
+
+// ── Date utilities ──
+function parseDate(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function dStr(d){return`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;}
+function p2(n){return String(n).padStart(2,'0');}
+function addD(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function endDate(start,workDays){return wdStr(start,workDays);}
+function fmtDate(s){
+  try{const d=parseDate(s);
+  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return`${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;}catch(e){return s;}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CONFIGURABLE SETTINGS (per-block start date, per-trade duration)
+// ═══════════════════════════════════════════════════════════════
+const DEFAULT_BLOCK_START = '2025-01-06';  // Monday, first working day
+const DEFAULT_TRADE_DAYS  = 6;             // working days per trade per level (1 takt beat)
+
+// Per-block start dates (user-editable)
+let blockStarts = {
+  '138A': DEFAULT_BLOCK_START,
+  '138B': DEFAULT_BLOCK_START,
+  '140A': DEFAULT_BLOCK_START,
+  '140B': DEFAULT_BLOCK_START,
+  '140C': DEFAULT_BLOCK_START,
+};
+
+// Per-trade durations in working days (user-editable)
+let tradeDurations = TRADES.map(()=> DEFAULT_TRADE_DAYS);
+
+// ═══════════════════════════════════════════════════════════════
+//  DATA MODEL
+//  Standard takt: Trade[ti] on Level[li] starts after:
+//    - blockStart + (ti + li) × TAKT_BEAT working days
+//  where TAKT_BEAT = tradeDurations[ti] (each trade has its own beat)
+//  BUT for sequential flow: Trade[ti] on Level[li] starts at the
+//  end of Trade[ti-1] on the same level, AND at the end of Trade[ti]
+//  on Level[li-1]. We compute this precisely with working days.
+// ═══════════════════════════════════════════════════════════════
+let segs = [];
+let segId = 1;
+
+function buildDefaultSegs(){
+  segs = []; segId = 1;
+
+  Object.entries(BLOCK_LEVELS).forEach(([block, levels])=>{
+    const bs = blockStarts[block];
+
+    // Build a 2D start-date grid: startGrid[ti][li] = date string
+    // Rule: Trade[ti] on Level[li] starts at:
+    //   max( end of Trade[ti] on Level[li-1],   ← trade must finish prev level
+    //        end of Trade[ti-1] on Level[li] )   ← prev trade must vacate this level
+    // This is the standard takt sequencing constraint.
+
+    const startGrid = [];
+    for(let ti=0; ti<TRADES.length; ti++){
+      startGrid.push(new Array(levels.length).fill(null));
+    }
+
+    for(let ti=0; ti<TRADES.length; ti++){
+      for(let li=0; li<levels.length; li++){
+        const dur = tradeDurations[ti];
+        let earliest = bs;
+
+        // Must finish previous level first
+        if(li > 0){
+          const prevLevelStart = startGrid[ti][li-1];
+          earliest = laterDate(earliest, wdStr(prevLevelStart, tradeDurations[ti]));
+        } else {
+          // First level: Trade[ti] enters after Trade[ti-1] has been working
+          // on Level[0] for its full duration — takt offset
+          if(ti > 0){
+            const prevTradeLevel0Start = startGrid[ti-1][0];
+            earliest = laterDate(earliest, wdStr(prevTradeLevel0Start, tradeDurations[ti-1]));
+          }
+        }
+
+        // Must wait for previous trade to vacate this level
+        if(ti > 0){
+          const prevTradeStart = startGrid[ti-1][li];
+          if(prevTradeStart){
+            const prevTradeEnd = wdStr(prevTradeStart, tradeDurations[ti-1]);
+            earliest = laterDate(earliest, prevTradeEnd);
+          }
+        }
+
+        startGrid[ti][li] = earliest;
+
+        segs.push({
+          id: segId++,
+          block, tradeIndex:ti, level:levels[li], levelIndex:li,
+          start: earliest,
+          duration: dur,   // working days
+          status: 'not-started', notes: ''
+        });
+      }
+    }
+  });
+}
+
+function laterDate(a, b){
+  return a >= b ? a : b;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+let activeTab  = 'trade';
+let hlTrade    = null;
+let editId     = null;
+let popSt      = 'not-started';
+let settingsMode = 'block';
+
+buildDefaultSegs();
+
+const getWeeks       = ()=> parseInt(document.getElementById('weeksShown').value)||80;
+const getColPx       = ()=> parseInt(document.getElementById('colPx').value)||42;
+const getRowPx       = ()=> parseInt(document.getElementById('rowPx').value)||32;
+const getBlockFilter = ()=> document.getElementById('selBlock').value;
+const getStatusFilter= ()=> document.getElementById('selStatus').value;
+
+// Earliest block start (used for X-axis origin)
+function getChartOrigin(){
+  const dates = Object.values(blockStarts);
+  return dates.reduce((a,b)=> a<b?a:b);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════
+function switchTab(tab){
+  activeTab = tab;
+  document.getElementById('tab-trade').classList.toggle('active',    tab==='trade');
+  document.getElementById('tab-takt').classList.toggle('active',     tab==='takt');
+  document.getElementById('tab-schedule').classList.toggle('active', tab==='schedule');
+
+  const isSchedule = tab==='schedule';
+  const isTakt     = tab==='takt';
+
+  // Side panel: show only in trade view
+  document.getElementById('sidePanel').style.display  = (!isTakt&&!isSchedule) ? '' : 'none';
+  // Legend bar: show only in takt view
+  document.getElementById('legendBar').style.display  = isTakt ? 'flex' : 'none';
+  // Chart wrap: hide in schedule view
+  document.getElementById('chartWrap').style.display  = isSchedule ? 'none' : '';
+  // Schedule wrap: show only in schedule view
+  document.getElementById('svWrap').classList.toggle('active', isSchedule);
+
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SETTINGS PANEL
+// ═══════════════════════════════════════════════════════════════
+function openSettings(mode){
+  settingsMode = mode;
+  const overlay = document.getElementById('settingsOverlay');
+  const title   = document.getElementById('settingsTitle');
+  const body    = document.getElementById('settingsBody');
+  overlay.style.display = 'flex';
+
+  if(mode === 'block'){
+    title.textContent = 'Block Start Dates';
+    let h = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.62rem;color:var(--muted);margin-bottom:12px">Set the first working day each block begins on site. The takt schedule for that block is calculated forward from this date using 6-day working weeks (Mon–Sat, excl. Singapore public holidays).</div>';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    Object.entries(blockStarts).forEach(([block, date])=>{
+      h += `<div class="frow" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;margin:0">
+        <label style="font-size:.7rem;font-weight:700;color:var(--accent);margin-bottom:6px">${block}</label>
+        <input type="date" id="bs_${block}" value="${date}" style="width:100%">
+      </div>`;
+    });
+    h += '</div>';
+    body.innerHTML = h;
+  } else {
+    title.textContent = 'Trade Durations (working days per level)';
+    let h = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.62rem;color:var(--muted);margin-bottom:12px">Set how many working days each trade spends on one level. This is the takt beat for that trade. Working days = Mon–Sat excluding Singapore public holidays.</div>';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+    TRADES.forEach((t,i)=>{
+      h += `<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);
+        border:1px solid var(--border);border-radius:5px;padding:6px 8px">
+        <div style="width:9px;height:9px;border-radius:2px;background:${COLORS[i]};flex-shrink:0"></div>
+        <span style="font-size:.65rem;flex:1;color:var(--text)">${i+1}. ${t}</span>
+        <input type="number" id="td_${i}" value="${tradeDurations[i]}" min="1" max="60"
+          style="width:52px;text-align:center">
+      </div>`;
+    });
+    h += '</div>';
+    body.innerHTML = h;
+  }
+}
+
+function closeSettings(){
+  document.getElementById('settingsOverlay').style.display = 'none';
+}
+
+function applySettings(){
+  if(settingsMode === 'block'){
+    Object.keys(blockStarts).forEach(block=>{
+      const el = document.getElementById('bs_'+block);
+      if(el && el.value) blockStarts[block] = el.value;
+    });
+  } else {
+    TRADES.forEach((_,i)=>{
+      const el = document.getElementById('td_'+i);
+      if(el) tradeDurations[i] = Math.max(1, parseInt(el.value)||DEFAULT_TRADE_DAYS);
+    });
+  }
+  closeSettings();
+  buildDefaultSegs();
+  render();
+}
+
+// Close settings on overlay click
+document.getElementById('settingsOverlay').addEventListener('click', function(e){
+  if(e.target === this) closeSettings();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════════════
+function render(){
+  renderSide();
+  if(activeTab==='trade')    renderTradeView();
+  else if(activeTab==='takt') renderTaktView();
+  else if(activeTab==='schedule') renderScheduleView();
+  renderStats();
+}
+
+function renderSide(){
+  if(activeTab==='takt'){
+    const bar = document.getElementById('legendBar');
+    let bhtml = '<span style="font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:monospace;margin-right:6px;flex-shrink:0">Trades:</span>';
+    TRADES.forEach((t,i)=>{
+      const hl = hlTrade===i ? 'border-color:'+COLORS[i]+';' : '';
+      const label = t.length>22 ? t.slice(0,20)+'\u2026' : t;
+      bhtml += `<div onclick="toggleHL(${i})" title="${t}"
+        style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;
+        border-radius:3px;cursor:pointer;border:1.5px solid transparent;${hl}
+        font-size:.58rem;color:var(--text)">
+        <div style="width:9px;height:9px;border-radius:2px;background:${COLORS[i]};flex-shrink:0"></div>
+        ${i+1}. ${label}</div>`;
+    });
+    bar.innerHTML = bhtml;
+    return;
+  }
+  const div = document.getElementById('sideList');
+  div.innerHTML = '';
+  const rh = getRowPx();
+  TRADES.forEach((t,i)=>{
+    const row = document.createElement('div');
+    row.className = 'trade-row'+(hlTrade===i?' hl':'');
+    row.style.height = rh+'px';
+    row.style.minHeight = rh+'px';
+    row.innerHTML = `<span class="tr-num">${i+1}</span>
+      <div class="tr-dot" style="background:${COLORS[i]}"></div>
+      <span class="tr-name">${t}</span>`;
+    row.onclick = ()=>{ hlTrade=hlTrade===i?null:i; render(); };
+    div.appendChild(row);
+  });
+}
+
+// ── Shared helpers ──
+function buildWkDates(origin){
+  const weeks=getWeeks(), colPx=getColPx();
+  const wkDates=[];
+  for(let w=0;w<weeks;w++) wkDates.push(dStr(addD(parseDate(origin),w*7)));
+  return wkDates;
+}
+
+function wkHeaderHTML(wkDates, colPx, cornerW, cornerH, today){
+  let h=`<div class="col-header" style="height:${cornerH}px">`;
+  h+=`<div class="ch-corner" style="width:${cornerW}px;height:${cornerH}px"><span>Block&nbsp;/&nbsp;Lvl</span></div>`;
+  wkDates.forEach((wd,wi)=>{
+    const isTW=wd<=today&&(wi===wkDates.length-1||wkDates[wi+1]>today);
+    const d=parseDate(wd);
+    h+=`<div class="wk-cell${isTW?' today-wk':''}" style="width:${colPx}px;height:${cornerH}px" title="${wd}">
+      <span class="wd">${p2(d.getDate())}/${p2(d.getMonth()+1)}</span>
+      <span class="wn">W${wi+1}</span></div>`;
+  });
+  h+=`</div>`;
+  return h;
+}
+
+function wkBgHTML(wkDates, colPx, today){
+  return wkDates.map((wd,wi)=>{
+    const isTW=wd<=today&&(wi===wkDates.length-1||wkDates[wi+1]>today);
+    return`<div class="wbg${isTW?' today-wk':''}" style="left:${wi*colPx}px;width:${colPx}px"></div>`;
+  }).join('');
+}
+
+// Convert a date string to X pixel position relative to chart origin
+function dateToX(dateStr, origin, colPx){
+  const calDays = calDaysBetween(origin, dateStr);
+  return (calDays / 7) * colPx;
+}
+
+// Compute pre-calculated pixel positions for all segs
+function calcSegPx(origin, colPx, totalW){
+  const px = {};
+  segs.forEach(s=>{
+    const x  = Math.max(0, dateToX(s.start, origin, colPx));
+    const x2 = Math.min(totalW, dateToX(endDate(s.start, s.duration), origin, colPx));
+    const sd = calDaysBetween(origin, s.start);
+    const ed = calDaysBetween(origin, endDate(s.start, s.duration));
+    px[s.id] = {x, x2, sd, ed, visible: x2>0 && x<totalW};
+  });
+  return px;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TAB 1 — TRADE VIEW
+//  Y-axis: Trade rows  |  X-axis: Time
+// ═══════════════════════════════════════════════════════════════
+function renderTradeView(){
+  const weeks=getWeeks(), colPx=getColPx(), rowPx=getRowPx();
+  const bFilter=getBlockFilter(), stFilter=getStatusFilter();
+  const today=dStr(new Date());
+  const blocks=bFilter==='ALL'?Object.keys(BLOCK_LEVELS):[bFilter];
+  const origin=getChartOrigin();
+  const totalW=weeks*colPx;
+  const wkDates=buildWkDates(origin);
+  const todayX=Math.max(0,dateToX(today,origin,colPx));
+  const showToday=todayX>=0&&todayX<totalW;
+  const segPx=calcSegPx(origin,colPx,totalW);
+
+  let html=`<div style="display:inline-block;min-width:${totalW}px">`;
+
+  // Week header (no corner — side panel is the label)
+  html+=`<div class="col-header" style="height:48px">`;
+  wkDates.forEach((wd,wi)=>{
+    const isTW=wd<=today&&(wi===weeks-1||wkDates[wi+1]>today);
+    const d=parseDate(wd);
+    html+=`<div class="wk-cell${isTW?' today-wk':''}" style="width:${colPx}px;height:48px" title="${wd}">
+      <span class="wd">${p2(d.getDate())}/${p2(d.getMonth()+1)}</span>
+      <span class="wn">W${wi+1}</span></div>`;
+  });
+  html+=`</div>`;
+
+  blocks.forEach(block=>{
+    const levels=BLOCK_LEVELS[block];
+    // Block label bar
+    html+=`<div style="height:22px;background:var(--surface2);border-bottom:1px solid var(--accent);
+      border-top:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:8px">
+      <span style="font-size:.68rem;font-weight:800;color:var(--accent);letter-spacing:.1em;text-transform:uppercase">${block}</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:.54rem;color:var(--muted)">
+        starts ${fmtDate(blockStarts[block])} · ${levels.length} levels · ${TRADES.length} trades</span>
+    </div>`;
+
+    TRADES.forEach((_,ti)=>{
+      const color=COLORS[ti];
+      const isDim=hlTrade!==null&&hlTrade!==ti;
+      let tradeLevelSegs=segs
+        .filter(s=>s.block===block&&s.tradeIndex===ti&&(stFilter==='ALL'||s.status===stFilter))
+        .sort((a,b)=>a.levelIndex-b.levelIndex);
+
+      html+=`<div class="trade-band" style="height:${rowPx}px">`;
+      html+=`<div class="t-strip" style="width:${totalW}px;height:${rowPx}px;position:relative">`;
+      html+=wkBgHTML(wkDates,colPx,today);
+
+      if(showToday&&ti===0){
+        html+=`<div class="today-line" style="left:${todayX}px">
+          ${block===blocks[0]?'<div class="today-tag">TODAY</div>':''}
+        </div>`;
+      } else if(showToday){
+        html+=`<div class="today-line" style="left:${todayX}px"></div>`;
+      }
+
+      tradeLevelSegs.forEach((seg,si)=>{
+        const p=segPx[seg.id];
+        if(!p||!p.visible) return;
+        const ww=Math.max(4,p.x2-p.x);
+        const dim=isDim?' dimmed':'';
+        const nextSeg=tradeLevelSegs[si+1];
+        let arrow='';
+        if(nextSeg){
+          const np=segPx[nextSeg.id];
+          if(np&&np.x>p.x2&&np.x<totalW)
+            arrow=`<div class="seg-arrow" style="left:${p.x2+1}px"></div>`;
+        }
+        html+=`${arrow}<div class="seg st-${seg.status}${dim}"
+          style="left:${p.x}px;width:${ww}px;background:${color}"
+          title="[${ti+1}] ${TRADES[ti]}&#10;${block} · L${seg.level}&#10;${fmtDate(seg.start)} · ${seg.duration}wd&#10;End: ${fmtDate(endDate(seg.start,seg.duration))}&#10;Status: ${seg.status}"
+          onclick="openPopup(event,${seg.id})">
+          ${ww>20?`<span class="s-lvl">L${seg.level}</span>`:''}
+          ${ww>42?`<span class="s-dur">${seg.duration}d</span>`:''}
+        </div>`;
+      });
+
+      html+=`</div></div>`;
+    });
+  });
+
+  html+=`</div>`;
+  document.getElementById('chartInner').innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TAB 2 — TAKT PLAN VIEW
+//  Y-axis: Block/Level rows  |  X-axis: Time
+//  One trade per level at a time — sequential, no overlap
+// ═══════════════════════════════════════════════════════════════
+function renderTaktView(){
+  const weeks=getWeeks(), colPx=getColPx(), rowPx=getRowPx();
+  const bFilter=getBlockFilter(), stFilter=getStatusFilter();
+  const today=dStr(new Date());
+  const blocks=bFilter==='ALL'?Object.keys(BLOCK_LEVELS):[bFilter];
+  const origin=getChartOrigin();
+  const totalW=weeks*colPx;
+  const totalDays=weeks*7;
+  const todayX=Math.max(0,dateToX(today,origin,colPx));
+  const showToday=todayX>=0&&todayX<totalW;
+  const wkDates=buildWkDates(origin);
+  const segPx=calcSegPx(origin,colPx,totalW);
+
+  const BLK_W=58, LVL_W=50, LBL_W=BLK_W+LVL_W;
+  const HDR_H=48, BLK_DIV_H=26;
+
+  // Calculate Y positions
+  const rowTops={};
+  const blockRowMap=[];
+  let yOff=0;
+  blocks.forEach(block=>{
+    const levels=BLOCK_LEVELS[block];
+    const blockTop=yOff;
+    yOff+=BLK_DIV_H;
+    const lvRows=[];
+    levels.forEach((level,li)=>{
+      rowTops[block+'|'+level]=yOff;
+      lvRows.push({level,li,rowTop:yOff});
+      yOff+=rowPx;
+    });
+    blockRowMap.push({block,levels:lvRows,blockTop});
+  });
+  const totalBodyH=yOff;
+
+  let html=`<div style="display:inline-block;min-width:${LBL_W+totalW}px;position:relative">`;
+
+  // Week header
+  html+=wkHeaderHTML(wkDates,colPx,LBL_W,HDR_H,today);
+
+  // Body
+  html+=`<div style="position:relative;height:${totalBodyH}px;width:${LBL_W+totalW}px">`;
+
+  // SVG diagonal connectors
+  let svgLines='';
+  blocks.forEach(block=>{
+    const levels=BLOCK_LEVELS[block];
+    TRADES.forEach((_,ti)=>{
+      if(hlTrade!==null&&hlTrade!==ti) return;
+      const color=COLORS[ti];
+      levels.forEach((level,li)=>{
+        if(li>=levels.length-1) return;
+        const nextLevel=levels[li+1];
+        const seg1=segs.find(s=>s.block===block&&s.tradeIndex===ti&&s.level===level);
+        const seg2=segs.find(s=>s.block===block&&s.tradeIndex===ti&&s.level===nextLevel);
+        if(!seg1||!seg2) return;
+        const p1=segPx[seg1.id], p2=segPx[seg2.id];
+        if(!p1||!p2||(!p1.visible&&!p2.visible)) return;
+        const y1=rowTops[block+'|'+level]+rowPx;
+        const y2=rowTops[block+'|'+nextLevel];
+        const x1=LBL_W+Math.min(totalW,Math.max(0,p1.x2));
+        const x2c=LBL_W+Math.min(totalW,Math.max(0,p2.x));
+        svgLines+=`<line x1="${x1}" y1="${y1}" x2="${x2c}" y2="${y2}"
+          stroke="${color}" stroke-width="1.5" stroke-opacity="0.4" stroke-dasharray="3,2"/>`;
+      });
+    });
+  });
+
+  html+=`<svg style="position:absolute;top:0;left:0;width:${LBL_W+totalW}px;height:${totalBodyH}px;
+    pointer-events:none;z-index:5;overflow:visible"
+    viewBox="0 0 ${LBL_W+totalW} ${totalBodyH}">${svgLines}</svg>`;
+
+  // Block sections
+  let firstBlock=true;
+  blockRowMap.forEach(({block,levels:lvRows,blockTop})=>{
+
+    html+=`<div style="position:absolute;top:${blockTop}px;left:0;
+      width:${LBL_W+totalW}px;height:${BLK_DIV_H}px;display:flex;z-index:12">
+      <div style="width:${LBL_W}px;height:${BLK_DIV_H}px;flex-shrink:0;
+        background:var(--surface2);border-bottom:1px solid var(--accent);
+        border-right:2px solid var(--accent);
+        display:flex;align-items:center;gap:6px;padding:0 8px;
+        position:sticky;left:0;z-index:13">
+        <span style="font-size:.7rem;font-weight:800;color:var(--accent);letter-spacing:.08em;text-transform:uppercase">${block}</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:.52rem;color:var(--muted)">${fmtDate(blockStarts[block])}</span>
+      </div>
+      <div style="flex:1;background:var(--surface2);border-bottom:1px solid var(--accent)"></div>
+    </div>`;
+
+    lvRows.forEach(({level,li,rowTop})=>{
+      const rowSegs=segs
+        .filter(s=>s.block===block&&s.level===level&&(stFilter==='ALL'||s.status===stFilter))
+        .sort((a,b)=>a.tradeIndex-b.tradeIndex);
+
+      html+=`<div style="position:absolute;top:${rowTop}px;left:0;
+        width:${LBL_W+totalW}px;height:${rowPx}px;
+        border-bottom:1px solid var(--border);display:flex;z-index:6">`;
+
+      html+=`<div style="width:${BLK_W}px;height:${rowPx}px;flex-shrink:0;
+        background:var(--surface);border-right:1px solid var(--border);
+        display:flex;align-items:center;justify-content:center;
+        font-family:'IBM Plex Mono',monospace;font-size:.58rem;color:var(--muted);
+        position:sticky;left:0;z-index:11">${block}</div>`;
+
+      html+=`<div style="width:${LVL_W}px;height:${rowPx}px;flex-shrink:0;
+        background:var(--surface);border-right:2px solid var(--border);
+        display:flex;align-items:center;justify-content:center;
+        font-family:'IBM Plex Mono',monospace;font-size:.65rem;font-weight:600;color:var(--text);
+        position:sticky;left:${BLK_W}px;z-index:11">L${level}</div>`;
+
+      html+=`<div style="position:relative;width:${totalW}px;height:${rowPx}px;flex-shrink:0">`;
+      html+=wkBgHTML(wkDates,colPx,today);
+
+      if(showToday){
+        html+=`<div class="today-line" style="left:${todayX}px">
+          ${li===0&&firstBlock?'<div class="today-tag">TODAY</div>':''}
+        </div>`;
+      }
+
+      rowSegs.forEach(seg=>{
+        const p=segPx[seg.id];
+        if(!p||!p.visible) return;
+        const ww=Math.max(4,p.x2-p.x);
+        const color=COLORS[seg.tradeIndex];
+        const isDim=hlTrade!==null&&hlTrade!==seg.tradeIndex;
+        const dim=isDim?' dimmed':'';
+        const tname=TRADES[seg.tradeIndex];
+        const shortName=tname.length>16?tname.slice(0,14)+'\u2026':tname;
+
+        html+=`<div class="wagon st-${seg.status}${dim}"
+          style="left:${p.x}px;width:${ww}px;background:${color}"
+          title="[${seg.tradeIndex+1}] ${tname}&#10;${block} \u00b7 L${level}&#10;Start: ${fmtDate(seg.start)} \u00b7 ${seg.duration}wd&#10;End: ${fmtDate(endDate(seg.start,seg.duration))}&#10;Status: ${seg.status}${seg.notes?'&#10;Notes: '+seg.notes:''}"
+          onclick="openPopup(event,${seg.id})">
+          <span class="wg-num">${seg.tradeIndex+1}.</span>
+          ${ww>50?`<span class="wg-name">${shortName}</span>`:''}
+        </div>`;
+      });
+
+      html+=`</div></div>`;
+    });
+
+    firstBlock=false;
+  });
+
+  html+=`</div></div>`;
+  document.getElementById('chartInner').innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SCHEDULE VIEW STATE
+// ═══════════════════════════════════════════════════════════════
+//  SCHEDULE VIEW
+// ═══════════════════════════════════════════════════════════════
+let svFloorFilter = 'ALL';
+let baseline = {};
+
+function captureBaseline(){
+  baseline = {};
+  segs.forEach(s=>{
+    const key = s.block+'|'+s.tradeIndex+'|'+s.levelIndex;
+    if(!baseline[key]) baseline[key] = { start:s.start, end:endDate(s.start,s.duration) };
+  });
+}
+
+function getVariance(seg){
+  const key = seg.block+'|'+seg.tradeIndex+'|'+seg.levelIndex;
+  const bl = baseline[key];
+  if(!bl) return null;
+  return calDaysBetween(bl.end, endDate(seg.start, seg.duration));
+}
+
+function fmtShortDate(s){
+  try{
+    const d = parseDate(s);
+    const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getDate()+' '+M[d.getMonth()];
+  }catch(e){ return s; }
+}
+
+// Status helpers
+const STATUS_COLOR = {
+  'completed':   '#00c9a7',
+  'in-progress': '#4d96ff',
+  'delayed':     '#ff4d6d',
+  'not-started': '#566070'
+};
+const STATUS_ICON = {
+  'completed':'✓','in-progress':'▶','delayed':'⚠','not-started':'○'
+};
+const STATUS_LABEL = {
+  'completed':'Complete','in-progress':'In Progress',
+  'delayed':'Delayed','not-started':'Not Started'
+};
+
+// ── Inline status update ──
+function svSetStatus(segId, newStatus){
+  const seg = segs.find(s=>s.id===segId);
+  if(!seg) return;
+  seg.status = newStatus;
+  if(newStatus==='completed') cascadeNextLevel(seg);
+  // Close any open dropdowns
+  document.querySelectorAll('.sv-dropdown').forEach(el=>el.style.display='none');
+  renderScheduleView();
+  renderStats();
+}
+
+// ── Open full edit popup from schedule ──
+function svOpenEditById(evt, sid){
+  evt.stopPropagation();
+  const td = evt.currentTarget.closest('td');
+  const rect = td ? td.getBoundingClientRect() : {left:200,top:200};
+  const fakeEvt = { stopPropagation:function(){}, clientX:rect.left+10, clientY:rect.top+10 };
+  openPopup(fakeEvt, sid);
+}
+
+// ── Toggle status dropdown ──
+function svToggleDD(evt, ddId){
+  evt.stopPropagation();
+  const dd = document.getElementById(ddId);
+  if(!dd) return;
+  const wasOpen = dd.style.display === 'block';
+  document.querySelectorAll('.sv-dropdown').forEach(el=>el.style.display='none');
+  if(!wasOpen){
+    const trigger = evt.currentTarget;
+    const rect = trigger.getBoundingClientRect();
+    dd.style.left = rect.left + 'px';
+    dd.style.top  = (rect.bottom + 3) + 'px';
+    dd.style.display = 'block';
+  }
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', function(){
+  document.querySelectorAll('.sv-dropdown').forEach(el=>el.style.display='none');
+});
+
+function setSvFloor(lv){ svFloorFilter=lv; renderScheduleView(); }
+
+// ── MAIN RENDER ──
+function renderScheduleView(){
+  const bFilter  = getBlockFilter();
+  const stFilter = getStatusFilter();
+  const blocks   = bFilter==='ALL' ? Object.keys(BLOCK_LEVELS) : [bFilter];
+
+  if(Object.keys(baseline).length===0) captureBaseline();
+
+  // Collect all unique levels
+  const allLvlSet = new Set();
+  blocks.forEach(b=> BLOCK_LEVELS[b].forEach(lv=> allLvlSet.add(lv)));
+  const allLevels = [...allLvlSet].sort();
+  const visLevels = svFloorFilter==='ALL' ? allLevels
+    : allLevels.filter(lv=> lv===svFloorFilter);
+
+  // ── Floor filter bar (DOM) ──
+  const bar = document.getElementById('svFloorBar');
+  bar.innerHTML = '';
+
+  const lbl = document.createElement('span');
+  lbl.style.cssText = 'font-size:.58rem;color:var(--muted);font-family:monospace;margin-right:4px;flex-shrink:0';
+  lbl.textContent = 'LEVEL:';
+  bar.appendChild(lbl);
+
+  ['ALL', ...allLevels].forEach(function(lv){
+    const btn = document.createElement('div');
+    btn.className = 'sv-fbtn' + (svFloorFilter===lv ? ' active' : '');
+    btn.textContent = lv==='ALL' ? 'ALL' : 'L'+lv;
+    btn.onclick = function(){ setSvFloor(lv); };
+    bar.appendChild(btn);
+  });
+
+  // ── Build table via DOM ──
+  const thead = document.getElementById('svThead');
+  const tbody = document.getElementById('svTbody');
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+
+  // Header row 1: trade names
+  const hr1 = document.createElement('tr');
+  hr1.className = 'sv-hdr1';
+
+  function th(txt, attrs, style){
+    const t = document.createElement('th');
+    t.innerHTML = txt;
+    if(attrs) Object.keys(attrs).forEach(k=> t.setAttribute(k, attrs[k]));
+    if(style) t.style.cssText = style;
+    return t;
+  }
+
+  hr1.appendChild(th('Block', {rowspan:2},
+    'position:sticky;left:0;z-index:31;background:var(--surface2);min-width:54px;vertical-align:middle'));
+  hr1.appendChild(th('Lvl', {rowspan:2},
+    'position:sticky;left:54px;z-index:31;background:var(--surface2);min-width:46px;vertical-align:middle'));
+
+  TRADES.forEach(function(t,i){
+    const short = t.length>18 ? t.slice(0,16)+'\u2026' : t;
+    const cell = th(
+      '<div style="display:flex;align-items:center;gap:5px;justify-content:center">'+
+      '<span style="width:8px;height:8px;border-radius:2px;background:rgba(0,0,0,.25);display:inline-block;flex-shrink:0"></span>'+
+      '<span style="font-size:.62rem;font-weight:800">'+(i+1)+'. '+short+'</span></div>',
+      {colspan:2},
+      'background:'+COLORS[i]+';color:#000;border:1px solid rgba(0,0,0,.2);min-width:190px;padding:5px 8px'
+    );
+    hr1.appendChild(cell);
+  });
+  thead.appendChild(hr1);
+
+  // Header row 2: START / END
+  const hr2 = document.createElement('tr');
+  hr2.className = 'sv-hdr2';
+  TRADES.forEach(function(_,i){
+    const bg = 'background:'+hexMix(COLORS[i], 0.15)+';';
+    hr2.appendChild(th('<span style="color:var(--green);font-weight:700">\u25b6 START</span>',
+      {}, bg+'min-width:94px'));
+    hr2.appendChild(th('<span style="color:#ff6b6b;font-weight:700">\u25a0 END</span>',
+      {}, bg+'min-width:94px'));
+  });
+  thead.appendChild(hr2);
+
+  // ── Body rows ──
+  blocks.forEach(function(block){
+    const levels = BLOCK_LEVELS[block].filter(function(lv){ return visLevels.includes(lv); });
+    if(!levels.length) return;
+
+    levels.forEach(function(level, li_vis){
+      const li = BLOCK_LEVELS[block].indexOf(level);
+      const tr = document.createElement('tr');
+
+      // Block label cell (rowspan)
+      if(li_vis===0){
+        const td = document.createElement('td');
+        td.className = 'sv-col-blk';
+        td.setAttribute('rowspan', levels.length);
+        td.style.cssText = 'vertical-align:middle;font-size:.7rem;font-weight:800;'+
+          'letter-spacing:.08em;text-transform:uppercase;color:var(--accent);'+
+          'border-right:2px solid var(--accent)';
+        td.textContent = block;
+        tr.appendChild(td);
+      }
+
+      // Level label
+      const tdLvl = document.createElement('td');
+      tdLvl.className = 'sv-col-lvl';
+      tdLvl.textContent = 'L'+level;
+      tr.appendChild(tdLvl);
+
+      // Trade cells
+      TRADES.forEach(function(_,ti){
+        const seg = segs.find(function(s){
+          return s.block===block && s.tradeIndex===ti && s.level===level;
+        });
+
+        if(!seg || (stFilter!=='ALL' && seg.status!==stFilter)){
+          const e1 = document.createElement('td');
+          const e2 = document.createElement('td');
+          e1.className = 'sv-cell sv-empty';
+          e2.className = 'sv-cell sv-empty';
+          tr.appendChild(e1);
+          tr.appendChild(e2);
+          return;
+        }
+
+        const variance = getVariance(seg);
+        const endD = endDate(seg.start, seg.duration);
+        const sc = STATUS_COLOR[seg.status] || '#566070';
+        const ddId = 'svdd_'+seg.id;
+
+        // ── START cell ──
+        const tdS = document.createElement('td');
+        tdS.className = 'sv-cell';
+        tdS.style.cssText = 'border-left:3px solid '+sc+';border-right:1px dashed var(--border);padding:5px 7px;vertical-align:top';
+
+        // Status badge (opens dropdown)
+        const badge = document.createElement('div');
+        badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:3px 8px;'+
+          'border-radius:4px;font-family:monospace;font-size:.56rem;font-weight:700;'+
+          'cursor:pointer;user-select:none;letter-spacing:.03em;margin-bottom:4px;'+
+          'background:'+sc+'22;color:'+sc+';border:1px solid '+sc+'66';
+        badge.innerHTML = STATUS_ICON[seg.status]+' '+STATUS_LABEL[seg.status]+
+          ' <span style="font-size:.5rem;opacity:.7;margin-left:2px">\u25be</span>';
+        badge.onclick = function(e){ svToggleDD(e, ddId); };
+        tdS.appendChild(badge);
+
+        // Dropdown (fixed-position, hidden)
+        const dd = document.createElement('div');
+        dd.id = ddId;
+        dd.className = 'sv-dropdown';
+        dd.style.cssText = 'display:none;position:fixed;z-index:500;'+
+          'background:var(--surface);border:1px solid var(--border);'+
+          'border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.75);min-width:145px;overflow:hidden';
+        ['not-started','in-progress','completed','delayed'].forEach(function(st){
+          const opt = document.createElement('div');
+          const oc = STATUS_COLOR[st];
+          opt.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;'+
+            'cursor:pointer;font-family:monospace;font-size:.62rem;color:'+oc+';'+
+            'border-bottom:1px solid var(--border)';
+          opt.innerHTML = '<span>'+STATUS_ICON[st]+'</span><span>'+STATUS_LABEL[st]+'</span>';
+          opt.onmouseover = function(){ this.style.background='rgba(255,255,255,.07)'; };
+          opt.onmouseout  = function(){ this.style.background=''; };
+          opt.onclick = function(e){ e.stopPropagation(); svSetStatus(seg.id, st); };
+          dd.appendChild(opt);
+        });
+        tdS.appendChild(dd);
+
+        // Start date row
+        const dateRow = document.createElement('div');
+        dateRow.style.cssText = 'display:flex;align-items:center;gap:4px;'+
+          'font-family:monospace;font-size:.55rem';
+        const startLbl = document.createElement('span');
+        startLbl.style.cssText = 'color:var(--muted);font-size:.47rem';
+        startLbl.textContent = 'START';
+        const startVal = document.createElement('span');
+        startVal.style.cssText = 'color:var(--text);font-weight:600';
+        startVal.textContent = fmtShortDate(seg.start);
+        dateRow.appendChild(startLbl);
+        dateRow.appendChild(startVal);
+        if(variance!==null && variance!==0){
+          const vspan = document.createElement('span');
+          vspan.className = 'sv-variance '+(variance>0?'pos':'neg');
+          vspan.textContent = variance>0 ? '+'+variance+'d' : variance+'d';
+          dateRow.appendChild(vspan);
+        }
+        tdS.appendChild(dateRow);
+        tr.appendChild(tdS);
+
+        // ── END cell ──
+        const tdE = document.createElement('td');
+        tdE.className = 'sv-cell';
+        tdE.style.cssText = 'padding:5px 7px;vertical-align:top';
+
+        const endRow = document.createElement('div');
+        endRow.style.cssText = 'display:flex;align-items:center;gap:4px;'+
+          'font-family:monospace;font-size:.55rem;margin-bottom:4px';
+        const endLbl = document.createElement('span');
+        endLbl.style.cssText = 'color:var(--muted);font-size:.47rem';
+        endLbl.textContent = 'END';
+        const endVal = document.createElement('span');
+        endVal.style.cssText = 'color:var(--text);font-weight:600';
+        endVal.textContent = fmtShortDate(endD);
+        endRow.appendChild(endLbl);
+        endRow.appendChild(endVal);
+        tdE.appendChild(endRow);
+
+        const durRow = document.createElement('div');
+        durRow.style.cssText = 'display:flex;align-items:center;gap:4px;font-family:monospace;font-size:.52rem';
+        const durLbl = document.createElement('span');
+        durLbl.style.cssText = 'color:var(--muted);font-size:.47rem';
+        durLbl.textContent = 'DUR';
+        const durVal = document.createElement('span');
+        durVal.style.cssText = 'color:var(--muted)';
+        durVal.textContent = seg.duration+'wd';
+        const editBtn = document.createElement('button');
+        editBtn.style.cssText = 'margin-left:auto;background:transparent;'+
+          'border:1px solid var(--border);color:var(--muted);border-radius:3px;'+
+          'padding:1px 5px;font-size:.5rem;cursor:pointer;font-family:monospace';
+        editBtn.textContent = '\u270e Edit';
+        editBtn.onmouseover = function(){ this.style.borderColor='var(--accent)';this.style.color='var(--accent)'; };
+        editBtn.onmouseout  = function(){ this.style.borderColor='var(--border)';this.style.color='var(--muted)'; };
+        editBtn.onclick = function(e){ svOpenEditById(e, seg.id); };
+        durRow.appendChild(durLbl);
+        durRow.appendChild(durVal);
+        durRow.appendChild(editBtn);
+        tdE.appendChild(durRow);
+        tr.appendChild(tdE);
+      });
+
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+// ── Colour helper: blend hex colour with surface at given opacity ──
+function hexMix(hex, opacity){
+  // Just return a semi-transparent version for column headers
+  return hex + Math.round(opacity * 255).toString(16).padStart(2,'0');
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  STATS
+// ═══════════════════════════════════════════════════════════════
+function renderStats(){
+  const bf=getBlockFilter(),sf=getStatusFilter();
+  const fs=segs.filter(s=>(bf==='ALL'||s.block===bf)&&(sf==='ALL'||s.status===sf));
+  document.getElementById('stTotal').textContent = fs.length;
+  document.getElementById('stWip').textContent   = fs.filter(s=>s.status==='in-progress').length;
+  document.getElementById('stDone').textContent  = fs.filter(s=>s.status==='completed').length;
+  document.getElementById('stDelay').textContent = fs.filter(s=>s.status==='delayed').length;
+  document.getElementById('stNs').textContent    = fs.filter(s=>s.status==='not-started').length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CASCADE on completion
+// ═══════════════════════════════════════════════════════════════
+function cascadeNextLevel(seg){
+  if(seg.status!=='completed') return;
+  const block=seg.block, ti=seg.tradeIndex;
+  const levels=BLOCK_LEVELS[block];
+  let prevEnd=endDate(seg.start,seg.duration);
+
+  for(let nextLi=seg.levelIndex+1; nextLi<levels.length; nextLi++){
+    const nextSeg=segs.find(s=>s.block===block&&s.tradeIndex===ti&&s.levelIndex===nextLi);
+    if(!nextSeg) break;
+    if(ti>0){
+      const prevTradeSeg=segs.find(s=>s.block===block&&s.tradeIndex===ti-1&&s.levelIndex===nextLi);
+      if(prevTradeSeg){
+        const pte=endDate(prevTradeSeg.start,prevTradeSeg.duration);
+        if(pte>prevEnd) prevEnd=pte;
+      }
+    }
+    if(prevEnd>nextSeg.start){
+      nextSeg.start=prevEnd;
+      if(nextSeg.status!=='completed') nextSeg.status='not-started';
+    }
+    prevEnd=endDate(nextSeg.start,nextSeg.duration);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  POPUP EDITOR
+// ═══════════════════════════════════════════════════════════════
+const popup=document.getElementById('popup');
+
+function openPopup(e,id){
+  e.stopPropagation();
+  const seg=segs.find(s=>s.id===id);
+  if(!seg) return;
+  editId=id; popSt=seg.status;
+
+  document.getElementById('phDot').style.background=COLORS[seg.tradeIndex];
+  document.getElementById('phTrade').textContent='['+(seg.tradeIndex+1)+'] '+TRADES[seg.tradeIndex];
+  document.getElementById('phLoc').textContent='Block '+seg.block+'  \u00b7  Level '+seg.level+
+    '  ('+(seg.levelIndex+1)+' of '+BLOCK_LEVELS[seg.block].length+')';
+  document.getElementById('popStart').value=seg.start;
+  document.getElementById('popDur').value=seg.duration;
+  document.getElementById('popNotes').value=seg.notes||'';
+  refreshCalc(seg.start,seg.duration,seg.block,seg.levelIndex);
+  updatePills(popSt);
+
+  const prevLvl=seg.levelIndex>0?BLOCK_LEVELS[seg.block][seg.levelIndex-1]:null;
+  const nextLvl=BLOCK_LEVELS[seg.block][seg.levelIndex+1];
+  let note='';
+  if(prevLvl) note+='\u2190 From <b>L'+prevLvl+'</b>. ';
+  note+='Now: <b>L'+seg.level+'</b>.';
+  if(nextLvl) note+=' \u2192 Moves to <b>L'+nextLvl+'</b> when completed.';
+  else        note+=' <b>Final level.</b>';
+  document.getElementById('popNote').innerHTML=note;
+
+  const pw=324,ph=490;
+  let px=e.clientX+14,py=e.clientY-20;
+  if(px+pw>window.innerWidth-8)  px=e.clientX-pw-14;
+  if(py+ph>window.innerHeight-8) py=window.innerHeight-ph-8;
+  if(py<8) py=8;
+  popup.style.left=px+'px'; popup.style.top=py+'px';
+  popup.classList.add('open');
+}
+
+function closePopup(){ popup.classList.remove('open'); editId=null; }
+
+function liveCalc(){
+  const seg=segs.find(s=>s.id===editId); if(!seg) return;
+  const start=document.getElementById('popStart').value;
+  const dur=parseInt(document.getElementById('popDur').value);
+  if(start&&dur>=1) refreshCalc(start,dur,seg.block,seg.levelIndex);
+}
+
+function refreshCalc(start,dur,block,li){
+  const ed=endDate(start,dur);
+  document.getElementById('popEnd').value=fmtDate(ed);
+  const nextLvl=BLOCK_LEVELS[block][li+1];
+  document.getElementById('popNext').value=nextLvl?'L'+nextLvl+': '+fmtDate(ed):'— (final level)';
+}
+
+function setSt(s){ popSt=s; updatePills(s); }
+function updatePills(active){
+  ['not-started','in-progress','completed','delayed'].forEach(s=>{
+    document.getElementById('pi-'+s).className='pill'+(s===active?' sel-'+s:'');
+  });
+}
+
+function saveSeg(){
+  if(!editId) return;
+  const seg=segs.find(s=>s.id===editId); if(!seg) return;
+  const start=document.getElementById('popStart').value;
+  const dur=parseInt(document.getElementById('popDur').value);
+  if(!start){alert('Enter a start date.');return;}
+  if(!dur||dur<1){alert('Duration must be \u2265 1 working day.');return;}
+  seg.start=start; seg.duration=dur; seg.status=popSt;
+  seg.notes=document.getElementById('popNotes').value;
+  if(popSt==='completed') cascadeNextLevel(seg);
+  closePopup(); render();
+}
+
+function deleteSeg(){
+  if(!editId||!confirm('Delete this wagon?')) return;
+  segs=segs.filter(s=>s.id!==editId);
+  closePopup(); render();
+}
+
+document.addEventListener('click',e=>{
+  if(popup.classList.contains('open')&&!popup.contains(e.target)) closePopup();
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closePopup(); closeSettings(); } });
+
+// ═══════════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════════
+function toggleHL(i){ hlTrade=hlTrade===i?null:i; render(); }
+
+function resetView(){
+  document.getElementById('weeksShown').value=80;
+  document.getElementById('colPx').value=42;
+  document.getElementById('rowPx').value=32;
+  document.getElementById('selBlock').value='ALL';
+  document.getElementById('selStatus').value='ALL';
+  hlTrade=null;
+  Object.keys(blockStarts).forEach(b=>{ blockStarts[b]=DEFAULT_BLOCK_START; });
+  tradeDurations=TRADES.map(()=>DEFAULT_TRADE_DAYS);
+  buildDefaultSegs();
+  render();
+}
+
+function exportJSON(){
+  const blob=new Blob([JSON.stringify({blockStarts,tradeDurations,segs},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='BMC54_TaktPlan.json';a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EXPORT TO EXCEL
+//  Creates one sheet per block.
+//  Rows  = Levels (L02, L03 …)
+//  Columns = Trades (one trade = 5 cols: Status | Start | End | Duration | Notes)
+//  Plus a separate "Summary" sheet with overall counts.
+//  The exported file can be re-imported to update statuses.
+// ═══════════════════════════════════════════════════════════════
+function exportToExcel(){
+  if(typeof XLSX === 'undefined'){
+    alert('SheetJS library not loaded. Please check your internet connection.');
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+  const STATUS_MAP = {
+    'not-started':'Not Started',
+    'in-progress':'In Progress',
+    'completed':'Completed',
+    'delayed':'Delayed'
+  };
+
+  // ── Per-block sheets ──
+  Object.keys(BLOCK_LEVELS).forEach(function(block){
+    const levels = BLOCK_LEVELS[block];
+
+    // Build header rows
+    // Row 1: merged trade name headers
+    // Row 2: sub-column headers
+    // Row 3+: data
+
+    const tradeSubCols = ['Status','Start Date','End Date','Duration (wd)','Notes'];
+    const numSubCols   = tradeSubCols.length;
+
+    // Build array-of-arrays
+    const aoa = [];
+
+    // Row 0: Title
+    const titleRow = ['BMC54 Archi Takt Plan — Block ' + block, '', 'Exported: ' + new Date().toLocaleDateString('en-SG')];
+    aoa.push(titleRow);
+    aoa.push([]); // blank row
+
+    // Row 2: Level col header + trade group headers
+    const hdr1 = ['Level'];
+    TRADES.forEach(function(t){ hdr1.push(t); for(var i=1;i<numSubCols;i++) hdr1.push(''); });
+    aoa.push(hdr1);
+
+    // Row 3: sub-column headers
+    const hdr2 = [''];
+    TRADES.forEach(function(){ tradeSubCols.forEach(function(sc){ hdr2.push(sc); }); });
+    aoa.push(hdr2);
+
+    // Data rows: one per level
+    levels.forEach(function(level, li){
+      const row = ['L' + level];
+      TRADES.forEach(function(_, ti){
+        const seg = segs.find(function(s){
+          return s.block===block && s.tradeIndex===ti && s.level===level;
+        });
+        if(seg){
+          row.push(STATUS_MAP[seg.status] || seg.status);
+          row.push(seg.start);
+          row.push(endDate(seg.start, seg.duration));
+          row.push(seg.duration);
+          row.push(seg.notes || '');
+        } else {
+          for(var i=0;i<numSubCols;i++) row.push('');
+        }
+      });
+      aoa.push(row);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // ── Column widths ──
+    const colWidths = [{wch:8}]; // Level col
+    TRADES.forEach(function(){
+      colWidths.push({wch:14}); // Status
+      colWidths.push({wch:12}); // Start
+      colWidths.push({wch:12}); // End
+      colWidths.push({wch:8});  // Duration
+      colWidths.push({wch:20}); // Notes
+    });
+    ws['!cols'] = colWidths;
+
+    // ── Freeze panes: freeze top 4 rows and left 1 column ──
+    ws['!freeze'] = {xSplit:1, ySplit:4};
+
+    XLSX.utils.book_append_sheet(wb, ws, block);
+  });
+
+  // ── Summary sheet ──
+  const summaryAoa = [];
+  summaryAoa.push(['BMC54 Archi Takt Plan — Progress Summary']);
+  summaryAoa.push(['Exported: ' + new Date().toLocaleDateString('en-SG')]);
+  summaryAoa.push([]);
+  summaryAoa.push(['Block','Total Wagons','Not Started','In Progress','Completed','Delayed','% Complete']);
+
+  Object.keys(BLOCK_LEVELS).forEach(function(block){
+    const blockSegs = segs.filter(function(s){ return s.block===block; });
+    const total     = blockSegs.length;
+    const ns        = blockSegs.filter(function(s){ return s.status==='not-started'; }).length;
+    const ip        = blockSegs.filter(function(s){ return s.status==='in-progress'; }).length;
+    const done      = blockSegs.filter(function(s){ return s.status==='completed'; }).length;
+    const delayed   = blockSegs.filter(function(s){ return s.status==='delayed'; }).length;
+    const pct       = total ? Math.round(done/total*100)+'%' : '0%';
+    summaryAoa.push([block, total, ns, ip, done, delayed, pct]);
+  });
+
+  // Overall totals
+  summaryAoa.push([]);
+  const tot   = segs.length;
+  const totNS = segs.filter(function(s){ return s.status==='not-started'; }).length;
+  const totIP = segs.filter(function(s){ return s.status==='in-progress'; }).length;
+  const totDone = segs.filter(function(s){ return s.status==='completed'; }).length;
+  const totDel  = segs.filter(function(s){ return s.status==='delayed'; }).length;
+  summaryAoa.push(['TOTAL', tot, totNS, totIP, totDone, totDel, Math.round(totDone/tot*100)+'%']);
+
+  const sumWs = XLSX.utils.aoa_to_sheet(summaryAoa);
+  sumWs['!cols'] = [{wch:10},{wch:14},{wch:13},{wch:13},{wch:13},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, sumWs, 'Summary');
+
+  // ── Download ──
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, 'BMC54_TaktPlan_' + dateStr + '.xlsx');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  IMPORT FROM EXCEL
+//  Reads a previously-exported xlsx and updates segs[] status,
+//  start date, and notes. Duration is also updated if changed.
+//  Unrecognised rows are skipped gracefully.
+//  After import: re-renders all views and recaptures baseline.
+// ═══════════════════════════════════════════════════════════════
+function importFromExcel(evt){
+  if(typeof XLSX === 'undefined'){
+    alert('SheetJS library not loaded.');
+    return;
+  }
+
+  const file = evt.target.files[0];
+  if(!file) return;
+
+  // Reset file input so same file can be re-imported
+  evt.target.value = '';
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb   = XLSX.read(data, {type:'array', cellDates:false});
+
+      const STATUS_REVERSE = {
+        'not started':'not-started',
+        'in progress':'in-progress',
+        'completed':  'completed',
+        'done':       'completed',
+        'complete':   'completed',
+        'delayed':    'delayed',
+        'at risk':    'delayed'
+      };
+
+      let updated = 0, skipped = 0;
+
+      // Process each block sheet
+      Object.keys(BLOCK_LEVELS).forEach(function(block){
+        const ws = wb.Sheets[block];
+        if(!ws) return;
+
+        const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        // Find the data start row: row with 'Level' in col A (should be row index 2)
+        let dataStart = -1;
+        for(var r=0;r<aoa.length;r++){
+          if(String(aoa[r][0]).trim().toLowerCase()==='level'){ dataStart=r+2; break; }
+        }
+        if(dataStart < 0) return;
+
+        const numSubCols = 5; // Status, Start, End, Duration, Notes
+
+        for(var r=dataStart; r<aoa.length; r++){
+          const row = aoa[r];
+          const lvlCell = String(row[0]||'').trim();
+          if(!lvlCell) continue;
+          const level = lvlCell.replace(/^L/i,'').padStart(2,'0');
+
+          TRADES.forEach(function(_, ti){
+            const colBase = 1 + ti * numSubCols;
+            const statusRaw = String(row[colBase]   || '').trim().toLowerCase();
+            const startRaw  = String(row[colBase+1] || '').trim();
+            const durRaw    = row[colBase+3];
+            const notesRaw  = String(row[colBase+4] || '').trim();
+
+            if(!statusRaw) return; // empty cell — skip
+
+            const seg = segs.find(function(s){
+              return s.block===block && s.tradeIndex===ti && s.level===level;
+            });
+            if(!seg){ skipped++; return; }
+
+            // Update status
+            const newStatus = STATUS_REVERSE[statusRaw];
+            if(newStatus) seg.status = newStatus;
+
+            // Update start date (validate format YYYY-MM-DD)
+            if(startRaw && /^\d{4}-\d{2}-\d{2}$/.test(startRaw)){
+              seg.start = startRaw;
+            }
+
+            // Update duration
+            const newDur = parseInt(durRaw);
+            if(!isNaN(newDur) && newDur >= 1) seg.duration = newDur;
+
+            // Update notes
+            if(notesRaw) seg.notes = notesRaw;
+
+            updated++;
+          });
+        }
+      });
+
+      // Recapture baseline after import (imported data is the new reference)
+      // Actually keep original baseline — just re-render
+      render();
+
+      // Show confirmation
+      const msg = 'Import complete.\n' +
+        '\u2713 Updated: ' + updated + ' wagon segments\n' +
+        (skipped ? '\u26a0 Skipped: ' + skipped + ' unmatched rows' : '');
+      alert(msg);
+
+    } catch(err){
+      alert('Import failed: ' + err.message + '\n\nMake sure you are importing a file exported from this app.');
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+
+// ── INIT ──
+render();
+
+
+
+</script>
+</body>
+</html>
