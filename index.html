@@ -702,6 +702,7 @@ select:focus,input:focus{border-color:var(--accent)}
 
 
 
+
 // ═══════════════════════════════════════════════════════════════
 //  CONSTANTS & MASTER DATA
 // ═══════════════════════════════════════════════════════════════
@@ -2220,32 +2221,115 @@ function colWidthPx(colDate,colPx){
 function buildHeaderHTML(colDates,colPx,cornerW,cornerH,today){
   const z=getZoom();
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  let h=cornerW?`<div class="col-header" style="height:${cornerH}px"><div class="ch-corner" style="width:${cornerW}px;height:${cornerH}px"><span>Block&nbsp;/&nbsp;Lvl</span></div>`:`<div class="col-header" style="height:${cornerH}px">`;
+  const MONTHS_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  // ── Two-row header for Day and Week zoom ──
+  // Row 1: Month banners (merged spans per month)
+  // Row 2: Day numbers / Week numbers
+  const ROW1H = 20; // month banner height px
+  const ROW2H = cornerH - ROW1H; // date row height
+  const totalH = cornerH;
+
+  // Corner div
+  let h = cornerW
+    ? `<div class="col-header" style="height:${totalH}px"><div class="ch-corner" style="width:${cornerW}px;height:${totalH}px"><span>Block&nbsp;/&nbsp;Lvl</span></div>`
+    : `<div class="col-header" style="height:${totalH}px">`;
+
   if(z==='day'){
+    // ── Row 1: month spans ──
+    // Group consecutive columns by month, calculate total width per group
+    const groups=[];
+    colDates.forEach((cd,ci)=>{
+      const d=parseDate(cd);
+      const mKey=d.getFullYear()*100+d.getMonth();
+      if(!groups.length||groups[groups.length-1].key!==mKey){
+        groups.push({key:mKey,month:d.getMonth(),year:d.getFullYear(),count:1,width:colPx});
+      } else {
+        groups[groups.length-1].count++;
+        groups[groups.length-1].width+=colPx;
+      }
+    });
+    h+=`<div style="display:flex;height:${ROW1H}px;position:absolute;top:0;left:${cornerW}px;pointer-events:none">`;
+    groups.forEach(g=>{
+      h+=`<div style="width:${g.width}px;height:${ROW1H}px;flex-shrink:0;display:flex;align-items:center;`
+        +`padding-left:4px;border-left:2px solid var(--accent);border-bottom:1px solid var(--border);`
+        +`background:var(--surface2);overflow:hidden;box-sizing:border-box">`
+        +`<span style="font-size:.58rem;font-weight:800;color:var(--accent);white-space:nowrap;letter-spacing:.04em">`
+        +`${MONTHS_FULL[g.month]} ${g.year}</span></div>`;
+    });
+    h+=`</div>`;
+    // ── Row 2: day cells (pushed down by ROW1H) ──
     colDates.forEach((cd,ci)=>{
       const d=parseDate(cd),cw=colPx;
       const isToday=cd===today,isWkEnd=d.getDay()===0||d.getDay()===6,isFirst=d.getDate()===1;
       const bg=isToday?'background:rgba(59,130,246,.18);':isWkEnd?'background:rgba(255,255,255,.03);':'';
       const border=isFirst?'border-left:2px solid var(--accent);':d.getDay()===1?'border-left:1px solid var(--border);':'';
-      h+=`<div class="wk-cell${isToday?' today-wk':''}" style="width:${cw}px;height:${cornerH}px;flex-direction:column;${bg}${border}">`;
-      if(cw>=22)h+=`<span class="wd" style="font-size:.62rem;font-weight:${isFirst?800:400};color:${isFirst?'var(--accent)':isToday?'var(--accent)':isWkEnd?'var(--muted)':'var(--text)'}">${p2(d.getDate())}</span>`;
-      if(cw>=30)h+=`<span class="wn" style="font-size:.5rem;color:var(--muted)">${isFirst?MONTHS[d.getMonth()]:''}</span>`;
+      h+=`<div class="wk-cell${isToday?' today-wk':''}" style="width:${cw}px;height:${totalH}px;flex-direction:column;${bg}${border};padding-top:${ROW1H}px;box-sizing:border-box">`;
+      if(cw>=18)h+=`<span class="wd" style="font-size:.6rem;font-weight:${isFirst?800:400};color:${isFirst?'var(--accent)':isToday?'var(--accent)':isWkEnd?'var(--muted)':'var(--text)'}">${p2(d.getDate())}</span>`;
+      if(cw>=36)h+=`<span class="wn" style="font-size:.48rem;color:var(--muted)">${['Su','Mo','Tu','We','Th','Fr','Sa'][d.getDay()]}</span>`;
       h+=`</div>`;
     });
+
   } else if(z==='week'){
+    // ── Row 1: month spans (group weeks by month of their start date) ──
+    const groups=[];
+    colDates.forEach((cd,ci)=>{
+      const d=parseDate(cd);
+      const mKey=d.getFullYear()*100+d.getMonth();
+      if(!groups.length||groups[groups.length-1].key!==mKey){
+        groups.push({key:mKey,month:d.getMonth(),year:d.getFullYear(),count:1,width:colPx});
+      } else {
+        groups[groups.length-1].count++;
+        groups[groups.length-1].width+=colPx;
+      }
+    });
+    h+=`<div style="display:flex;height:${ROW1H}px;position:absolute;top:0;left:${cornerW}px;pointer-events:none">`;
+    groups.forEach(g=>{
+      h+=`<div style="width:${g.width}px;height:${ROW1H}px;flex-shrink:0;display:flex;align-items:center;`
+        +`padding-left:4px;border-left:2px solid var(--accent);border-bottom:1px solid var(--border);`
+        +`background:var(--surface2);overflow:hidden;box-sizing:border-box">`
+        +`<span style="font-size:.58rem;font-weight:800;color:var(--accent);white-space:nowrap;letter-spacing:.04em">`
+        +`${MONTHS_FULL[g.month]} ${g.year}</span></div>`;
+    });
+    h+=`</div>`;
+    // ── Row 2: week cells ──
     colDates.forEach((wd,wi)=>{
       const isTW=wd<=today&&(wi===colDates.length-1||colDates[wi+1]>today);
       const d=parseDate(wd);
-      h+=`<div class="wk-cell${isTW?' today-wk':''}" style="width:${colPx}px;height:${cornerH}px" title="${wd}"><span class="wd">${p2(d.getDate())}/${p2(d.getMonth()+1)}</span><span class="wn">W${wi+1}</span></div>`;
+      const isFirst=d.getDate()<=7&&(wi===0||parseDate(colDates[wi-1]).getMonth()!==d.getMonth());
+      h+=`<div class="wk-cell${isTW?' today-wk':''}" style="width:${colPx}px;height:${totalH}px;flex-direction:column;padding-top:${ROW1H}px;box-sizing:border-box;${isFirst?'border-left:2px solid var(--accent);':''}" title="${wd}">`;
+      h+=`<span class="wd" style="font-size:.6rem">${p2(d.getDate())}/${p2(d.getMonth()+1)}</span>`;
+      h+=`<span class="wn" style="font-size:.5rem">W${wi+1}</span>`;
+      h+=`</div>`;
     });
+
   } else {
+    // Monthly — already shows month name as primary label, just add year below
     colDates.forEach((cd,ci)=>{
       const d=parseDate(cd),cw=colWidthPx(cd,colPx);
       const isNow=today>=cd&&(ci===colDates.length-1||today<colDates[ci+1]);
-      h+=`<div class="wk-cell${isNow?' today-wk':''}" style="width:${cw}px;height:${cornerH}px;flex-direction:column"><span class="wd" style="font-size:.72rem;font-weight:700">${MONTHS[d.getMonth()]}</span><span class="wn" style="font-size:.58rem">${d.getFullYear()}</span></div>`;
+      h+=`<div class="wk-cell${isNow?' today-wk':''}" style="width:${cw}px;height:${totalH}px;flex-direction:column">`;
+      h+=`<span class="wd" style="font-size:.72rem;font-weight:800;color:${isNow?'var(--accent)':'inherit'}">${MONTHS[d.getMonth()]}</span>`;
+      h+=`<span class="wn" style="font-size:.58rem;color:var(--muted)">${d.getFullYear()}</span>`;
+      h+=`</div>`;
     });
   }
-  h+=`</div>`;return h;
+  h+=`</div>`;
+
+  // Wrap in a relative container so the absolute month banner overlays correctly
+  if(z==='day'||z==='week'){
+    h=h.replace(
+      `<div class="col-header" style="height:${totalH}px">`,
+      `<div class="col-header" style="height:${totalH}px;position:relative;overflow:visible">`
+    );
+    if(cornerW){
+      h=h.replace(
+        `<div class="col-header" style="height:${totalH}px"><div class="ch-corner"`,
+        `<div class="col-header" style="height:${totalH}px;position:relative;overflow:visible"><div class="ch-corner"`
+      );
+    }
+  }
+  return h;
 }
 function buildBgHTML(colDates,colPx,today){
   const z=getZoom();
@@ -3094,6 +3178,7 @@ document.addEventListener('click',function(e){
 });
 // ── INIT ──
 render();
+
 
 
 
