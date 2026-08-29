@@ -4526,6 +4526,27 @@ function rdSaveAll(){
 
 
 // ── Import Raw Data from exported Excel ──────────────────────────────────
+// ── Trades restricted to specific blocks only ──────────────────
+// These trades exist ONLY in 140A and must not be imported/restored
+// to any other block even if they appear in the source Excel file.
+const BLOCK_ONLY_TRADES = {
+  '140A': [
+    'Floor Tiling (Bedrooms, Rental Flat Only)',
+    'UPVC Sliding Door Panels',
+    'Cabinet / Wardrobe'
+  ]
+};
+// Helper: returns true if a trade is ALLOWED for a given block
+function isTradeAllowed(blk, tradeName){
+  // Check if any block has a restriction on this trade
+  var owners = Object.keys(BLOCK_ONLY_TRADES).filter(function(ownerBlk){
+    return BLOCK_ONLY_TRADES[ownerBlk].indexOf(tradeName) >= 0;
+  });
+  // If trade is in BLOCK_ONLY_TRADES for some block(s), only allow for those blocks
+  if(owners.length > 0) return owners.indexOf(blk) >= 0;
+  return true; // not restricted — allowed everywhere
+}
+
 function rdImportExcel(input){
   var file=input.files[0];
   if(!file){return;}
@@ -4574,7 +4595,11 @@ function rdImportExcel(input){
         var trades=[];
         for(var ci2=1;ci2<tradeRow.length;ci2+=step){
           var tname=String(tradeRow[ci2]||'').trim();
-          if(tname&&tname!=='Level'&&tname!=='Storey') trades.push({name:tname,col:ci2});
+          if(tname&&tname!=='Level'&&tname!=='Storey'){
+            // Only import trades that are allowed for this block
+            if(isTradeAllowed(blk,tname)) trades.push({name:tname,col:ci2});
+            else console.log('Import: skipped restricted trade "'+tname+'" for block '+blk);
+          }
         }
 
         if(!trades.length){
@@ -4638,7 +4663,7 @@ function rdImportExcel(input){
 
             // ── Update DE_PD (planned dates) ──
             var dpKey=blk+'||'+lvl+'||'+tr.name;
-            if(nStart||nEnd){
+            if((nStart||nEnd)&&isTradeAllowed(blk,tr.name)){
               if(!DE_PD[dpKey]) DE_PD[dpKey]={};
               if(nStart) DE_PD[dpKey].s=nStart;
               if(nEnd)   DE_PD[dpKey].e=nEnd;
@@ -4646,7 +4671,7 @@ function rdImportExcel(input){
             }
 
             // ── Update DE_ST (status / actuals) ──
-            if(ns){
+            if(ns&&isTradeAllowed(blk,tr.name)){
               var existing=deGetSt(blk,lvl,tr.name)||{};
               var updated=Object.assign({},existing,{status:ns});
               // If completed, set actualEnd from End Date if available
@@ -4670,6 +4695,7 @@ function rdImportExcel(input){
                   if(nEnd)   tdObj.end=nEnd;
                   if(durVal>0) tdObj.days=durVal;
                 }
+                // Note: we never push new trade entries — only update existing ones
               }
             }
           });
