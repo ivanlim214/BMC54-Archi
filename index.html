@@ -379,6 +379,9 @@ select:focus,input:focus{border-color:var(--accent)}
   <div class="tab" id="tab-rawdata" onclick="switchTab('rawdata')">
     📋 Raw Data
   </div>
+  <div class="tab" id="tab-cycletime" onclick="switchTab('cycletime')">
+    ⏱ Cycle Time
+  </div>
 </div>
 </div>
 
@@ -1084,6 +1087,43 @@ select:focus,input:focus{border-color:var(--accent)}
   </div>
 </div>
 
+<!-- ══ CYCLE TIME TAB ══════════════════════════════════════════ -->
+<div id="ctWrap" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;background:var(--bg)">
+  <!-- Toolbar -->
+  <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap">
+    <span style="font-family:Syne,sans-serif;font-size:11px;font-weight:800;color:var(--text)">⏱ Cycle Time Analysis</span>
+    <div style="width:1px;height:18px;background:var(--border)"></div>
+    <label style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace">BLOCK</label>
+    <select id="ctBlock" onchange="ctRender()" style="font-size:9px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-family:'IBM Plex Mono',monospace">
+      <option value="ALL">All Blocks</option>
+      <option value="140A">140A</option>
+      <option value="140B">140B</option>
+      <option value="140C">140C</option>
+      <option value="138A">138A</option>
+      <option value="138B">138B</option>
+    </select>
+    <label style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace">METRIC</label>
+    <select id="ctMetric" onchange="ctRender()" style="font-size:9px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-family:'IBM Plex Mono',monospace">
+      <option value="avg">Average (days)</option>
+      <option value="min">Minimum (days)</option>
+      <option value="max">Maximum (days)</option>
+      <option value="total">Total (days)</option>
+    </select>
+    <label style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace">SORT</label>
+    <select id="ctSort" onchange="ctRender()" style="font-size:9px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-family:'IBM Plex Mono',monospace">
+      <option value="desc">Longest first</option>
+      <option value="asc">Shortest first</option>
+      <option value="seq">Trade sequence</option>
+    </select>
+    <div style="width:1px;height:18px;background:var(--border)"></div>
+    <div id="ctSummary" style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace"></div>
+  </div>
+  <!-- Chart area -->
+  <div style="flex:1;overflow:auto;padding:16px">
+    <div id="ctChart"></div>
+  </div>
+</div>
+
 
 <script>
 
@@ -1377,13 +1417,15 @@ function switchTab(tab){
   var svWrap    = document.getElementById('svWrap');
   var pcWrap     = document.getElementById('pcWrap');
   var verifyWrap = document.getElementById('verifyWrap');
+  var ctWrap     = document.getElementById('ctWrap');
   var isVerify   = tab==='verify';
   var isRawData  = tab==='rawdata';
   var isLPS      = tab==='lps';
   var isDash     = tab==='dashboard';
 
   // Full-panel views (fill entire screen below tab bar, no toolbar/main needed)
-  var isFullPanel = isRawData || isLPS || isDash || isVerify;
+  var isCycleTime= tab==='cycletime';
+  var isFullPanel = isRawData || isLPS || isDash || isVerify || isCycleTime;
 
   // Main toolbar — only for chart views (Trade, Takt, Data Entry)
   var toolbar = document.querySelector('.toolbar');
@@ -1400,6 +1442,7 @@ function switchTab(tab){
   if(svWrap)      svWrap.classList.toggle('active', isSchedule);
   if(pcWrap)      pcWrap.style.display     = isPostcon ? 'flex' : 'none';
   if(verifyWrap)  verifyWrap.style.display = isVerify  ? 'flex' : 'none';
+  if(ctWrap)     ctWrap.style.display     = isCycleTime  ? 'flex' : 'none';
 
   var vrTab = document.getElementById('tab-verify');
   if(vrTab) vrTab.classList.toggle('active', isVerify);
@@ -1420,6 +1463,7 @@ function switchTab(tab){
   else if(isLPS)       { setTimeout(lpsRender, 80); }
   else if(isRawData)   { syncSegsToDEST(); syncDEPDtoRAW(); setTimeout(rdRenderMulti, 80); }
   else if(isVerify)    { setTimeout(vrRender, 80); }
+  else if(tab==='cycletime'){ setTimeout(ctRender, 80); }
   else if(isPostcon)   { setTimeout(pcRender, 50); }
   else if(isSchedule)  { setTimeout(deRenderTakt, 50); render(); }
   else             { render(); }
@@ -8481,8 +8525,212 @@ function exportTabToPDF(tabId, title){
 
 
 
-// ── INIT ──
-render();
+
+// ── Cycle Time Tab ────────────────────────────────────────────────
+function ctRender(){
+  var chart   = document.getElementById('ctChart');
+  var summary = document.getElementById('ctSummary');
+  if(!chart) return;
+
+  var blkSel  = document.getElementById('ctBlock').value;
+  var metric  = document.getElementById('ctMetric').value;
+  var sortMode= document.getElementById('ctSort').value;
+  var blocks  = blkSel==='ALL'?['140A','140B','140C','138A','138B']:[blkSel];
+
+  // ── Build per-trade stats from RAW_DATA ──────────────────────
+  var tradeStats = {};
+  var tradeOrder = [];
+
+  blocks.forEach(function(blk){
+    var bdata = RAW_DATA[blk];
+    if(!bdata) return;
+    var blockTrades = (typeof DE_BT!=='undefined'&&DE_BT[blk])||TRADES;
+    blockTrades.forEach(function(t){
+      if(tradeOrder.indexOf(t)<0) tradeOrder.push(t);
+    });
+    (bdata.storeys||[]).forEach(function(sty){
+      if(isRefuge(blk,sty.sty)) return;
+      (sty.trades||[]).forEach(function(td){
+        if(!td.trade||td.trade==='Postcon') return;
+        if(typeof isTradeAllowed==='function'&&!isTradeAllowed(blk,td.trade)) return;
+        var days=td.days||0;
+        if(!days&&td.start&&td.end) days=workDaysBetween(td.start,td.end)+1;
+        if(!days) return;
+        if(!tradeStats[td.trade]) tradeStats[td.trade]={sum:0,count:0,min:9999,max:0};
+        var s=tradeStats[td.trade];
+        s.sum+=days; s.count++;
+        if(days<s.min) s.min=days;
+        if(days>s.max) s.max=days;
+      });
+    });
+  });
+
+  // ── Compute metric values ─────────────────────────────────────
+  var tradeVals=[];
+  tradeOrder.forEach(function(t){
+    var s=tradeStats[t]; if(!s) return;
+    var val=metric==='avg'?Math.round(s.sum/s.count*10)/10
+           :metric==='min'?s.min
+           :metric==='max'?s.max
+           :s.sum;
+    var ti=TRADES.indexOf(t);
+    tradeVals.push({
+      trade:t,val:val,ti:ti,
+      color:ti>=0?COLORS[ti%COLORS.length]:'#94a3b8',
+      avg:Math.round(s.sum/s.count*10)/10,
+      min:s.min,max:s.max,count:s.count,sum:s.sum
+    });
+  });
+
+  if(sortMode==='desc')     tradeVals.sort(function(a,b){return b.val-a.val;});
+  else if(sortMode==='asc') tradeVals.sort(function(a,b){return a.val-b.val;});
+
+  // ── Summary ───────────────────────────────────────────────────
+  var maxVal=tradeVals.length?Math.max.apply(null,tradeVals.map(function(t){return t.val;})):0;
+  var avgAll=tradeVals.length?Math.round(tradeVals.reduce(function(a,t){return a+t.avg;},0)/tradeVals.length*10)/10:0;
+  var longest=sortMode==='asc'?tradeVals[tradeVals.length-1]:tradeVals[0];
+  if(summary) summary.innerHTML=
+    '<b>'+tradeVals.length+'</b> trades &nbsp;·&nbsp; '
+    +'Max: <b style="color:#ef4444">'+maxVal+'d</b> &nbsp;·&nbsp; '
+    +'Avg: <b>'+avgAll+'d</b>'
+    +(longest?' &nbsp;·&nbsp; Slowest: <b style="color:#ef4444">'+longest.trade+'</b>':'')
+    +(metric==='avg'?' &nbsp;&nbsp;<span style="display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px"><span style="display:inline-block;width:24px;height:10px;background:#64748b;border-radius:2px;position:relative"><span style="position:absolute;top:15%;left:4px;width:2px;height:70%;background:#fff;border-radius:1px"></span><span style="position:absolute;top:15%;right:4px;width:2px;height:70%;background:#fff;border-radius:1px"></span></span><span style="font-size:9px;color:var(--muted)">= min/max range</span></span>':'');
+
+  // ── Layout constants ──────────────────────────────────────────
+  var BAR_H   = 36;           // taller rows
+  var LABEL_W = 220;          // trade label column
+  var STATS_W = 160;          // stats text after bar
+  var VAL_W   = 60;           // days value column
+  var CHART_W = Math.max(300, (chart.offsetWidth||700)-LABEL_W-STATS_W-VAL_W-40);
+  var metricLabel=metric==='avg'?'Avg Days':metric==='min'?'Min Days':metric==='max'?'Max Days':'Total Days';
+
+  // ── Nice round axis ticks ────────────────────────────────────
+  function niceTicks(maxV){
+    if(maxV<=0) return [0,1,2,5,10];
+    var candidates=[1,2,5,10,15,20,25,50];
+    var step=candidates.find(function(c){return maxV/c<=8;})||Math.ceil(maxV/6);
+    var ticks=[];
+    for(var v=0;v<=maxV*1.05;v+=step) ticks.push(v);
+    return ticks;
+  }
+  var axisTicks=niceTicks(maxVal);
+  // Use the axis ceiling (last tick) as scale — bars and ticks share same denominator
+  var axisMax=axisTicks[axisTicks.length-1]||maxVal||1;
+
+  var h='<div style="font-family:\'IBM Plex Mono\',monospace;padding-bottom:20px">';
+
+  // ── Column headers ────────────────────────────────────────────
+  h+='<div style="display:flex;align-items:center;padding:6px 8px 4px">';
+  h+='<div style="width:'+LABEL_W+'px;flex-shrink:0;font-size:11px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.05em">Trade</div>';
+  h+='<div style="flex:1;font-size:11px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.05em">'+metricLabel+' (working days)</div>';
+  h+='<div style="width:'+(STATS_W+VAL_W)+'px;text-align:right;font-size:11px;font-weight:800;color:var(--text);text-transform:uppercase">Value</div>';
+  h+='</div>';
+
+  // ── Axis scale row ─────────────────────────────────────────────
+  h+='<div style="display:flex;align-items:flex-end;padding:0 8px 4px;border-bottom:2px solid var(--border);margin-bottom:4px">';
+  h+='<div style="width:'+LABEL_W+'px;flex-shrink:0"></div>';
+  h+='<div style="flex:1;position:relative;height:24px">';
+  axisTicks.forEach(function(tick){
+    var pct=axisMax>0?(tick/axisMax*100):0;
+    if(pct>100.5) return;
+    pct=Math.min(pct,100);
+    h+='<div style="position:absolute;left:'+pct+'%;bottom:0;transform:translateX('+(pct<5?'0':pct>95?'-100%':'-50%')+')">';
+    h+='<div style="font-size:10px;font-weight:700;color:var(--muted);text-align:center;white-space:nowrap;line-height:1.2">'+tick+'d</div>';
+    h+='<div style="width:1px;height:6px;background:var(--muted);opacity:.6;margin:0 auto"></div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  h+='<div style="width:'+(STATS_W+VAL_W)+'px"></div>';
+  h+='</div>';
+
+  // Grid line background for bar rows
+  var gridStops=axisTicks.map(function(tick){
+    var pct=maxVal>0?Math.min(tick/maxVal*100,100):0;
+    return 'rgba(0,0,0,.07) '+pct+'%,rgba(0,0,0,.07) calc('+pct+'% + 1px),transparent calc('+pct+'% + 1px)';
+  }).join(',');
+  var gridBg='linear-gradient(to right,'+gridStops+')';
+
+  tradeVals.forEach(function(tv,idx){
+    var barW=maxVal>0?Math.round(tv.val/maxVal*CHART_W):0;
+    var isLongest=tv.val===maxVal&&maxVal>0;
+    var seqNum=TRADES.indexOf(tv.trade)+1;
+
+    // Determine text color on bar — white or dark based on color brightness
+    var hex=tv.color.replace('#','');
+    if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+    var lum=(r*299+g*587+b*114)/1000;
+    var onBarTc=lum>140?'#1a2233':'#ffffff';
+
+    // ── Row wrapper ──────────────────────────────────────────
+    h+='<div style="margin-bottom:6px;padding:3px 8px;border-radius:6px;'+(isLongest?'background:#fff5f5;border:1px solid #fecaca;':'border:1px solid transparent;')+'">';
+
+    // ── Label + stats line (ABOVE the bar) ───────────────────
+    h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
+    // Sequence + color dot + trade name
+    h+='<span style="font-size:10px;font-weight:700;color:var(--muted);min-width:24px;text-align:right">#'+seqNum+'</span>';
+    h+='<span style="width:10px;height:10px;border-radius:3px;background:'+tv.color+';flex-shrink:0;display:inline-block;border:1px solid rgba(0,0,0,.12)"></span>';
+    h+='<span style="font-size:11px;font-weight:700;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+tv.trade+'">'+tv.trade+'</span>';
+    // Stats: metric value (drives bar) | avg | min – max | n
+    var metricShort=metric==='avg'?'Avg':metric==='min'?'Min':metric==='max'?'Max':'Total';
+    h+='<span style="font-size:12px;font-weight:900;color:'+tv.color+';background:rgba(0,0,0,.06);border-radius:4px;padding:1px 6px">'+metricShort+' '+tv.val+'d</span>';
+    if(metric!=='avg'){
+      h+='<span style="font-size:10px;color:var(--muted)">Avg '+tv.avg+'d</span>';
+    }
+    h+='<span style="font-size:10px;color:var(--muted)">|</span>';
+    h+='<span style="font-size:10px;font-weight:700;color:#ef4444" title="Min">'+tv.min+'d</span>';
+    h+='<span style="font-size:10px;color:var(--muted)">–</span>';
+    h+='<span style="font-size:10px;font-weight:700;color:#16a34a" title="Max">'+tv.max+'d</span>';
+    h+='<span style="font-size:10px;color:var(--muted);font-weight:600">n='+tv.count+'</span>';
+    // Days value (right-aligned)
+    h+='<span style="font-size:15px;font-weight:900;color:'+(isLongest?'#ef4444':tv.color)+';font-family:Syne,sans-serif;min-width:'+VAL_W+'px;text-align:right">'+tv.val+'d</span>';
+    h+='</div>';
+
+    // ── Bar row (aligned with axis — both use same flex layout) ──
+    var barPct=axisMax>0?Math.round(tv.val/axisMax*10000)/100:0;
+    var minPct=axisMax>0?Math.round(tv.min/axisMax*10000)/100:0;
+    var maxPct=axisMax>0?Math.round(tv.max/axisMax*10000)/100:0;
+    h+='<div style="display:flex;align-items:center;gap:0;padding:0 8px;box-sizing:border-box">';
+    // Left spacer matches LABEL_W
+    h+='<div style="width:'+LABEL_W+'px;flex-shrink:0"></div>';
+    // Bar container — flex:1, same as axis container
+    h+='<div style="flex:1;position:relative;height:'+BAR_H+'px;border-radius:4px;overflow:visible;background:var(--surface)">';
+    // Grid lines via repeating gradient (pct based, fills 100% of flex container)
+    if(axisTicks.length){
+      var gStops=axisTicks.map(function(t){
+        var p=axisMax>0?Math.min(t/axisMax*100,100):0;
+        return 'rgba(0,0,0,.08) '+p+'%,rgba(0,0,0,.08) calc('+p+'% + 1px),transparent calc('+p+'% + 1px)';
+      }).join(',');
+      h+='<div style="position:absolute;inset:0;background:linear-gradient(to right,'+gStops+');pointer-events:none;border-radius:4px"></div>';
+    }
+    // Bar fill — width as %
+    // Bar fill — solid colour, no children
+    h+='<div style="position:absolute;top:0;left:0;height:100%;width:'+barPct+'%;background:'+tv.color+';border-radius:0 4px 4px 0;min-width:'+(tv.val>0?3:0)+'px"></div>';
+    // Range ticks: siblings of bar fill → left:% is relative to container (correct)
+    if(metric==='avg'&&tv.min<tv.max&&maxVal>0){
+      var ttip='Min: '+tv.min+'d | Max: '+tv.max+'d | Range: '+(tv.max-tv.min)+'d';
+      // Connecting band
+      h+='<div title="'+ttip+'" style="position:absolute;top:30%;height:40%;left:'+minPct+'%;width:'+(maxPct-minPct)+'%;background:rgba(255,255,255,0.45);border-radius:2px;pointer-events:none"></div>';
+      // Min tick
+      h+='<div title="Min: '+tv.min+'d" style="position:absolute;top:10%;left:'+minPct+'%;width:3px;height:80%;background:#fff;border-radius:2px;opacity:.95;pointer-events:none"></div>';
+      // Max tick
+      h+='<div title="Max: '+tv.max+'d" style="position:absolute;top:10%;left:calc('+maxPct+'% - 3px);width:3px;height:80%;background:#fff;border-radius:2px;opacity:.95;pointer-events:none"></div>';
+    }
+    h+='</div>';
+    // Right spacer matches VAL_W
+    h+='<div style="width:'+VAL_W+'px"></div>';
+    h+='</div>';
+
+    h+='</div>';
+  });
+
+  if(!tradeVals.length){
+    h+='<div style="text-align:center;padding:60px;color:var(--muted);font-size:13px">No cycle time data found for the selected block.<br>Make sure RAW_DATA has trade durations.</div>';
+  }
+
+  h+='</div>';
+  chart.innerHTML=h;
+}
 
 
 </script>
