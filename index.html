@@ -1118,6 +1118,22 @@ select:focus,input:focus{border-color:var(--accent)}
     <div style="width:1px;height:18px;background:var(--border)"></div>
     <div id="ctSummary" style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace"></div>
   </div>
+  <!-- Timeline scrubber -->
+  <div style="padding:10px 16px 8px;background:var(--surface2);border-bottom:2px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <span style="font-size:10px;font-weight:800;color:var(--text);font-family:'IBM Plex Mono',monospace;white-space:nowrap">📅 TIMELINE CUTOFF</span>
+      <span id="ctDateLabel" style="font-size:13px;font-weight:900;color:#2563eb;font-family:Syne,sans-serif;min-width:120px;letter-spacing:.02em">All Time</span>
+      <span style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace">— showing floors active up to this date</span>
+      <button onclick="ctResetTimeline()" style="margin-left:auto;font-size:9px;padding:4px 10px;border:1px solid #2563eb;border-radius:5px;background:#eff6ff;color:#2563eb;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-weight:700">↺ All Time</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="ctSliderStart" style="font-size:9px;font-weight:700;color:var(--muted);font-family:'IBM Plex Mono',monospace;white-space:nowrap;min-width:60px"></span>
+      <input type="range" id="ctSlider" min="0" max="1000" value="1000"
+        oninput="ctSliderMove(this.value)"
+        style="flex:1;height:8px;accent-color:#2563eb;cursor:pointer;border-radius:4px">
+      <span id="ctSliderEnd" style="font-size:9px;font-weight:700;color:var(--muted);font-family:'IBM Plex Mono',monospace;white-space:nowrap;min-width:60px;text-align:right"></span>
+    </div>
+  </div>
   <!-- Chart area -->
   <div style="flex:1;overflow:auto;padding:16px">
     <div id="ctChart"></div>
@@ -4723,7 +4739,7 @@ function rdImportExcel(input){
           if(tname&&tname!=='Level'&&tname!=='Storey'){
             // Only import trades that are allowed for this block
             if(isTradeAllowed(blk,tname)) trades.push({name:tname,col:ci2});
-            else console.log('Import: skipped restricted trade "'+tname+'" for block '+blk);
+            // restricted trade skipped silently
           }
         }
 
@@ -8527,6 +8543,80 @@ function exportTabToPDF(tabId, title){
 
 
 // ── Cycle Time Tab ────────────────────────────────────────────────
+
+// ── Cycle Time Timeline ───────────────────────────────────────────
+var _ctCutoffDate = null;  // null = all time
+var _ctDateMin = null;
+var _ctDateMax = null;
+
+function ctInitTimeline(){
+  // Find overall date range from RAW_DATA
+  var minD = null, maxD = null;
+  ['140A','140B','140C','138A','138B'].forEach(function(blk){
+    var bdata = RAW_DATA[blk]; if(!bdata) return;
+    (bdata.storeys||[]).forEach(function(sty){
+      (sty.trades||[]).forEach(function(td){
+        if(td.trade==='Postcon') return;
+        if(td.start){
+          var d = td.start;
+          if(!minD||d<minD) minD=d;
+          if(!maxD||d>maxD) maxD=d;
+        }
+      });
+    });
+  });
+  _ctDateMin = minD;
+  _ctDateMax = maxD;
+  // Set slider start/end labels
+  var elStart = document.getElementById('ctSliderStart');
+  var elEnd   = document.getElementById('ctSliderEnd');
+  if(elStart&&minD) elStart.textContent = minD.slice(0,7);
+  if(elEnd&&maxD)   elEnd.textContent   = maxD.slice(0,7);
+  ctUpdateDateLabel(null);
+}
+
+function ctSliderMove(val){
+  val = parseInt(val);
+  if(!_ctDateMin||!_ctDateMax){
+    // Try to init first
+    ctInitTimeline();
+    if(!_ctDateMin){ ctRender(); return; }
+  }
+  if(val>=1000){
+    _ctCutoffDate = null;
+    ctUpdateDateLabel(null);
+  } else {
+    var t0 = new Date(_ctDateMin).getTime();
+    var t1 = new Date(_ctDateMax).getTime();
+    var tCut = t0 + (t1-t0)*(val/1000);
+    var d = new Date(tCut);
+    var yyyy = d.getFullYear();
+    var mm = String(d.getMonth()+1).padStart(2,'0');
+    var dd2 = String(d.getDate()).padStart(2,'0');
+    _ctCutoffDate = yyyy+'-'+mm+'-'+dd2;
+    ctUpdateDateLabel(_ctCutoffDate);
+  }
+  ctRender();
+}
+
+function ctUpdateDateLabel(dateStr){
+  var el = document.getElementById('ctDateLabel');
+  if(!el) return;
+  if(!dateStr){ el.textContent='All Time'; el.style.color='var(--muted)'; return; }
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var d = new Date(dateStr);
+  el.textContent = months[d.getMonth()]+' '+d.getFullYear();
+  el.style.color = '#2563eb';
+}
+
+function ctResetTimeline(){
+  _ctCutoffDate = null;
+  var sl = document.getElementById('ctSlider');
+  if(sl) sl.value=1000;
+  ctUpdateDateLabel(null);
+  ctRender();
+}
+
 function ctRender(){
   var chart   = document.getElementById('ctChart');
   var summary = document.getElementById('ctSummary');
@@ -8541,6 +8631,9 @@ function ctRender(){
   var tradeStats = {};
   var tradeOrder = [];
 
+  // Initialise timeline range on first render
+  if(!_ctDateMin) ctInitTimeline();
+
   blocks.forEach(function(blk){
     var bdata = RAW_DATA[blk];
     if(!bdata) return;
@@ -8553,6 +8646,11 @@ function ctRender(){
       (sty.trades||[]).forEach(function(td){
         if(!td.trade||td.trade==='Postcon') return;
         if(typeof isTradeAllowed==='function'&&!isTradeAllowed(blk,td.trade)) return;
+        // ── Timeline filter: only include floors active at cutoff ──
+        if(_ctCutoffDate){
+          // Include floor if its work has started by the cutoff date
+          if(!td.start||td.start>_ctCutoffDate) return;
+        }
         var days=td.days||0;
         if(!days&&td.start&&td.end) days=workDaysBetween(td.start,td.end)+1;
         if(!days) return;
@@ -8586,7 +8684,15 @@ function ctRender(){
   else if(sortMode==='asc') tradeVals.sort(function(a,b){return a.val-b.val;});
 
   // ── Summary ───────────────────────────────────────────────────
-  var maxVal=tradeVals.length?Math.max.apply(null,tradeVals.map(function(t){return t.val;})):0;
+  // maxVal/minVal must cover BOTH the metric value (bar) AND the per-floor
+  // min/max range (range ticks) so nothing ever overflows the axis
+  var maxVal=tradeVals.length?Math.max.apply(null,tradeVals.map(function(t){
+    return Math.max(t.val, t.max);
+  })):0;
+  var minVal=tradeVals.length?Math.min.apply(null,tradeVals.map(function(t){
+    return Math.min(t.val, t.min>0?t.min:t.val);
+  })):0;
+  // Axis spans from a nice floor below minVal to a nice ceiling above maxVal
   var avgAll=tradeVals.length?Math.round(tradeVals.reduce(function(a,t){return a+t.avg;},0)/tradeVals.length*10)/10:0;
   var longest=sortMode==='asc'?tradeVals[tradeVals.length-1]:tradeVals[0];
   if(summary) summary.innerHTML=
@@ -8605,42 +8711,41 @@ function ctRender(){
   var metricLabel=metric==='avg'?'Avg Days':metric==='min'?'Min Days':metric==='max'?'Max Days':'Total Days';
 
   // ── Nice round axis ticks ────────────────────────────────────
-  function niceTicks(maxV){
-    if(maxV<=0) return [0,1,2,5,10];
-    var candidates=[1,2,5,10,15,20,25,50];
-    var step=candidates.find(function(c){return maxV/c<=8;})||Math.ceil(maxV/6);
+  function niceTicks(maxV, floorV){
+    floorV=floorV||0;
+    if(maxV<=0) return [0,2,4,6,8,10];
+    var span=maxV-floorV;
+    var candidates=[0.5,1,2,5,10,15,20,25,50,100];
+    var step=0.5;
+    for(var ci=0;ci<candidates.length;ci++){
+      step=candidates[ci];
+      if(Math.ceil(span/step)<=8) break;
+    }
+    // floor tick = largest multiple of step <= floorV
+    var floorTick=Math.floor(floorV/step)*step;
+    // ceiling tick = smallest multiple of step >= maxV
+    var ceilTick=Math.ceil(maxV/step)*step;
     var ticks=[];
-    for(var v=0;v<=maxV*1.05;v+=step) ticks.push(v);
+    for(var v=floorTick;v<=ceilTick+step*0.001;v+=step){
+      ticks.push(Math.round(v*10)/10);
+    }
     return ticks;
   }
-  var axisTicks=niceTicks(maxVal);
-  // Use the axis ceiling (last tick) as scale — bars and ticks share same denominator
+  // Build axis spanning from floor(minVal) to ceil(maxVal)
+  // so the scale reflects the CURRENT filtered data range
+  // Axis ticks span exactly the data range — no artificial margin
+  var axisTicks=niceTicks(maxVal, minVal);
+  var axisMin=axisTicks[0];
   var axisMax=axisTicks[axisTicks.length-1]||maxVal||1;
+  var axisRange=axisMax-axisMin||1;
 
   var h='<div style="font-family:\'IBM Plex Mono\',monospace;padding-bottom:20px">';
 
   // ── Column headers ────────────────────────────────────────────
-  h+='<div style="display:flex;align-items:center;padding:6px 8px 4px">';
+  h+='<div style="display:flex;align-items:center;padding:6px 8px 6px;border-bottom:2px solid var(--border);margin-bottom:4px">';
   h+='<div style="width:'+LABEL_W+'px;flex-shrink:0;font-size:11px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.05em">Trade</div>';
   h+='<div style="flex:1;font-size:11px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.05em">'+metricLabel+' (working days)</div>';
   h+='<div style="width:'+(STATS_W+VAL_W)+'px;text-align:right;font-size:11px;font-weight:800;color:var(--text);text-transform:uppercase">Value</div>';
-  h+='</div>';
-
-  // ── Axis scale row ─────────────────────────────────────────────
-  h+='<div style="display:flex;align-items:flex-end;padding:0 8px 4px;border-bottom:2px solid var(--border);margin-bottom:4px">';
-  h+='<div style="width:'+LABEL_W+'px;flex-shrink:0"></div>';
-  h+='<div style="flex:1;position:relative;height:24px">';
-  axisTicks.forEach(function(tick){
-    var pct=axisMax>0?(tick/axisMax*100):0;
-    if(pct>100.5) return;
-    pct=Math.min(pct,100);
-    h+='<div style="position:absolute;left:'+pct+'%;bottom:0;transform:translateX('+(pct<5?'0':pct>95?'-100%':'-50%')+')">';
-    h+='<div style="font-size:10px;font-weight:700;color:var(--muted);text-align:center;white-space:nowrap;line-height:1.2">'+tick+'d</div>';
-    h+='<div style="width:1px;height:6px;background:var(--muted);opacity:.6;margin:0 auto"></div>';
-    h+='</div>';
-  });
-  h+='</div>';
-  h+='<div style="width:'+(STATS_W+VAL_W)+'px"></div>';
   h+='</div>';
 
   // Grid line background for bar rows
@@ -8687,9 +8792,12 @@ function ctRender(){
     h+='</div>';
 
     // ── Bar row (aligned with axis — both use same flex layout) ──
-    var barPct=axisMax>0?Math.round(tv.val/axisMax*10000)/100:0;
-    var minPct=axisMax>0?Math.round(tv.min/axisMax*10000)/100:0;
-    var maxPct=axisMax>0?Math.round(tv.max/axisMax*10000)/100:0;
+    var barPct=axisRange>0?Math.round((tv.val-axisMin)/axisRange*10000)/100:0;
+    var minPct=axisRange>0?Math.round((tv.min-axisMin)/axisRange*10000)/100:0;
+    var maxPct=axisRange>0?Math.round((tv.max-axisMin)/axisRange*10000)/100:0;
+    barPct=Math.max(0,Math.min(barPct,100));
+    minPct=Math.max(0,Math.min(minPct,100));
+    maxPct=Math.max(0,Math.min(maxPct,100));
     h+='<div style="display:flex;align-items:center;gap:0;padding:0 8px;box-sizing:border-box">';
     // Left spacer matches LABEL_W
     h+='<div style="width:'+LABEL_W+'px;flex-shrink:0"></div>';
@@ -8698,22 +8806,26 @@ function ctRender(){
     // Grid lines via repeating gradient (pct based, fills 100% of flex container)
     if(axisTicks.length){
       var gStops=axisTicks.map(function(t){
-        var p=axisMax>0?Math.min(t/axisMax*100,100):0;
+        var p=axisRange>0?Math.max(0,Math.min((t-axisMin)/axisRange*100,100)):0;
         return 'rgba(0,0,0,.08) '+p+'%,rgba(0,0,0,.08) calc('+p+'% + 1px),transparent calc('+p+'% + 1px)';
       }).join(',');
       h+='<div style="position:absolute;inset:0;background:linear-gradient(to right,'+gStops+');pointer-events:none;border-radius:4px"></div>';
     }
     // Bar fill — width as %
-    // Bar fill — solid colour, no children
+    // Ghost bar: extends to tv.max (full range extent, light opacity)
+    var maxBarPct=axisRange>0?Math.round((tv.max-axisMin)/axisRange*10000)/100:0;
+    maxBarPct=Math.max(0,Math.min(maxBarPct,100));
+    h+='<div style="position:absolute;top:0;left:0;height:100%;width:'+maxBarPct+'%;background:'+tv.color+';opacity:0.22;border-radius:0 4px 4px 0"></div>';
+    // Solid metric bar: tv.val (avg/min/max/total)
     h+='<div style="position:absolute;top:0;left:0;height:100%;width:'+barPct+'%;background:'+tv.color+';border-radius:0 4px 4px 0;min-width:'+(tv.val>0?3:0)+'px"></div>';
-    // Range ticks: siblings of bar fill → left:% is relative to container (correct)
-    if(metric==='avg'&&tv.min<tv.max&&maxVal>0){
+    // Range ticks: min and max markers, positioned by same axisRange scale
+    if(tv.min<tv.max){
       var ttip='Min: '+tv.min+'d | Max: '+tv.max+'d | Range: '+(tv.max-tv.min)+'d';
-      // Connecting band
-      h+='<div title="'+ttip+'" style="position:absolute;top:30%;height:40%;left:'+minPct+'%;width:'+(maxPct-minPct)+'%;background:rgba(255,255,255,0.45);border-radius:2px;pointer-events:none"></div>';
-      // Min tick
+      // Connecting band between min and max ticks
+      h+='<div title="'+ttip+'" style="position:absolute;top:35%;height:30%;left:'+minPct+'%;width:'+(maxPct-minPct)+'%;background:rgba(255,255,255,0.5);border-radius:2px;pointer-events:none"></div>';
+      // Min tick (white vertical line)
       h+='<div title="Min: '+tv.min+'d" style="position:absolute;top:10%;left:'+minPct+'%;width:3px;height:80%;background:#fff;border-radius:2px;opacity:.95;pointer-events:none"></div>';
-      // Max tick
+      // Max tick (white vertical line)
       h+='<div title="Max: '+tv.max+'d" style="position:absolute;top:10%;left:calc('+maxPct+'% - 3px);width:3px;height:80%;background:#fff;border-radius:2px;opacity:.95;pointer-events:none"></div>';
     }
     h+='</div>';
