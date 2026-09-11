@@ -2649,7 +2649,9 @@ function deLoadIntoViews(){
           start='2026-01-01'; duration=5; missing++;
         }
         var saved=deGetSt(block,level,trade);
-        segs.push({id:id2++,block:block,tradeIndex:ti,level:level,levelIndex:li,
+        var globalTi=TRADES.indexOf(trade); // global index for colour/render lookup
+        if(globalTi<0) return; // skip trades not in global TRADES list
+        segs.push({id:id2++,block:block,tradeIndex:globalTi,level:level,levelIndex:li,
           start:start,duration:duration,
           status:saved.status!=='not-started'?saved.status:'not-started',
           notes:saved.remark||''});
