@@ -263,6 +263,40 @@ table.la td.tn small{display:block;font-weight:500;color:var(--mute)}
 .rnc{margin-top:4px;width:100%;border:1px solid var(--rule);border-radius:5px;background:var(--panel2);padding:3px 5px;font-size:12px}
 .ppc-big{font-size:46px;font-weight:700;line-height:1;letter-spacing:-.02em}
 .empty{padding:28px 18px;text-align:center;color:var(--ink2)}
+/* key dates */
+.kd-wrap{overflow-x:auto}
+table.kd{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
+table.kd th,table.kd td{padding:6px 6px;border-bottom:1px solid var(--rule2);text-align:left;white-space:nowrap;vertical-align:top}
+table.kd thead tr.g th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);border-bottom:0;padding-bottom:0}
+table.kd thead tr.g th.au{color:var(--wip)}
+table.kd thead tr.g th.ho{color:var(--done)}
+table.kd thead tr.n th{font-weight:600;color:var(--ink2);font-size:12px}
+table.kd .gs{border-left:2px solid var(--rule)}
+table.kd td.b{font-weight:700;font-size:13.5px;position:sticky;left:0;background:var(--panel)}
+table.kd td .dt{font-weight:600;color:var(--ink)}
+table.kd td .cd{display:block;font-size:11px;color:var(--mute)}
+table.kd td.past .dt{color:var(--mute);font-weight:500}
+table.kd td.soon .cd{color:var(--due);font-weight:600}
+table.kd td.nx{box-shadow:inset 0 0 0 2px var(--signal);background:color-mix(in srgb,var(--signal) 10%,var(--panel))}
+table.kd td.nx .cd{color:var(--signal-ink);font-weight:700}
+table.kd td.bf .dt{font-variant-numeric:tabular-nums}
+table.kd tr.sel td{background:color-mix(in srgb,var(--signal) 6%,var(--panel))}
+table.kd tbody tr{cursor:pointer}
+.kd-key{display:flex;flex-wrap:wrap;gap:6px 16px;padding:8px 14px 12px;font-size:12px;color:var(--ink2)}
+.kd-key i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.kd-tl{padding:6px 14px 4px}
+.kd-tl svg{display:block;width:100%;height:auto;overflow:visible}
+.kd-tl text{font-family:inherit}
+/* takt plan window */
+.ltm-nav{display:flex;align-items:center;gap:8px;margin:-4px 0 8px;flex-wrap:wrap}
+.ltm-nav .rng{font-size:13px;font-weight:600}
+.ltm-nav .rng small{font-weight:500;color:var(--mute);margin-left:6px}
+.ltm-wrap.drag{cursor:grabbing;user-select:none}
+table.ltm.nar thead tr.w th small{display:none}
+table.ltm.nar thead tr.w th{font-size:9px}
+table.ltm.xnar thead tr.w th{font-size:0}
+table.ltm.nar td.k .wg b{font-size:0}
+table.ltm.xnar .wg{margin:0;gap:0}
 .empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
 
 .bk-pick{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -374,6 +408,14 @@ dl.facts dt{color:var(--mute)} dl.facts dd{margin:0;font-weight:600}
   <section class="view" id="v-overview">
     <div class="vhead"><div><h2>Where every block stands</h2>
       <p id="ovSub"></p></div></div>
+    <div class="panel" id="kdPanel" style="margin-bottom:16px">
+      <div class="ph" style="flex-wrap:wrap"><h3>Authority inspections &amp; handover</h3><span class="sub" id="kdSub"></span>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+          <div class="seg" id="kdMode"><button data-m="table" class="on">Dates</button><button data-m="tl">Timeline</button></div>
+          <button class="ibtn sm" id="kdImp" title="Load an updated Archi &amp; ME Progress workbook">Import progress workbook</button>
+        </div></div>
+      <div id="kdBody"></div>
+    </div>
     <div class="ov-grid">
       <div class="panel">
         <div class="ph"><h3>Floor-by-floor stage</h3><span class="sub">Each floor shows the last phase fully finished. Red tick = floor has work behind plan. Click a block to open it.</span></div>
@@ -425,9 +467,14 @@ dl.facts dt{color:var(--mute)} dl.facts dd{margin:0;font-weight:600}
       <p>Location-time matrix: floors down the side, time across the top. Each cell shows the trade wagons in that floor for that period. Solid = finished, striped base = in progress, pale = still to do, red outline = behind plan.</p></div>
       <div class="tools">
         <div class="seg" id="ltmRes"><button data-r="week" class="on">Weeks</button><button data-r="day">Days</button></div>
-        <div class="seg" id="ltmSpan"><button data-s="all" class="on">Whole programme</button><button data-s="near">Data date ±12 wks</button></div>
+        <div class="seg" id="ltmWin" title="How many weeks fit on screen"><button data-w="12" class="on">12 wks</button><button data-w="24">24 wks</button><button data-w="52">52 wks</button><button data-w="0">All</button></div>
         <button class="ibtn sm" id="ltmJump">Go to data date</button>
       </div></div>
+    <div class="ltm-nav">
+      <div class="seg" id="ltmNav"><button data-d="-1" title="Back one window">&#9664; Back</button><button data-d="1" title="Forward one window">Next &#9654;</button></div>
+      <span class="rng" id="ltmRange"></span>
+      <span class="muted" style="font-size:12px;margin-left:auto">Drag the chart sideways, or Shift + scroll, to move along the timeline</span>
+    </div>
     <div class="ltm-wrap" id="ltmWrap"></div>
     <div class="ltm-codes" id="ltmCodes"></div>
   </section>
@@ -691,7 +738,9 @@ function parseProgressWorkbook(wb, XLSX) {
       const list = [];
       const ocd = ms[enc({ r: 7, c: c + 2 })], lock = ms[enc({ r: 8, c: c + 2 })], lift = ms[enc({ r: 9, c: c + 2 })];
       if (ocd && isDateNum(ocd.v)) list.push({ n: 'OCD (contract)', s: Math.round(ocd.v), e: Math.round(ocd.v) });
-      if (lift && isDateNum(lift.v)) list.push({ n: 'Lift handover', s: Math.round(lift.v), e: Math.round(lift.v) });
+      if (lift && isDateNum(lift.v) && lift.v > 3000) list.push({ n: 'Lift handover', s: Math.round(lift.v), e: Math.round(lift.v) });
+      const lru = ms[enc({ r: 10, c: c + 2 })];
+      if (lru && isDateNum(lru.v) && lru.v > 3000) list.push({ n: 'Lift ready to use', s: Math.round(lru.v), e: Math.round(lru.v) });
       for (let r = 13; r <= 24; r++) {
         const a = ms[enc({ r, c: 0 })]; if (!a) continue;
         const nm = clean(a.v); if (!lab.some(l => l.toLowerCase() === nm.toLowerCase())) continue;
@@ -928,6 +977,7 @@ function renderOverview() {
    <div class="kpi"><div class="k">Floor-trades complete</div><div class="v">${s.cellsDone}</div><div class="d muted">of ${s.cells}</div></div>
    <div class="kpi"><div class="k">Floor-trades behind</div><div class="v ${s.late ? 'neg' : ''}">${s.late}</div><div class="d muted">${tb} trades affected</div></div>
    <div class="kpi"><div class="k">Next milestone</div><div class="v" style="font-size:19px">${nextMs ? esc(nextMs.n) : '–'}</div><div class="d muted">${nextMs ? fdy(nextMs.s) + ' · ' + Math.round((nextMs.s - DD) / 7) + ' wks' : ''}</div></div>`;
+  renderKeyDates();
   // milestones
   const ms = [];
   BLOCKS().forEach(b => (PLAN.blocks[b].milestones || []).forEach(m => { if (m.s >= DD && !/External Wall/.test(m.n)) ms.push({ b, ...m }); }));
@@ -941,6 +991,86 @@ function renderOverview() {
   $('#behindTbl').innerHTML = `<thead><tr><th>Block</th><th>Trade</th><th class="num">Floors planned done</th><th class="num">Floors done</th><th class="num">Floors behind</th><th class="num">Days behind</th><th>Late floors</th></tr></thead><tbody>` +
     (rows.length ? rows.slice(0, 40).map(r => `<tr class="click" data-b="${r.b}" data-t="${esc(r.t.name)}"><td><b>${r.b}</b></td><td><span class="chip" style="border:0;background:none;padding:0"><i style="background:${r.t.color}"></i>${esc(r.t.name)}</span></td><td class="num">${r.pl}</td><td class="num">${r.ac}</td><td class="num neg"><b>${r.gap > 0 ? r.gap : '–'}</b></td><td class="num ${r.days > 14 ? 'neg' : ''}">${r.days}</td><td class="muted">${r.lateLv.slice(-6).reverse().map(l => 'L' + l).join(' ')}${r.lateLv.length > 6 ? ' …' : ''}</td></tr>`).join('')
       : `<tr><td colspan="7" class="empty"><b>Every trade is on or ahead of plan</b>Nothing has passed its planned finish without being completed.</td></tr>`) + '</tbody>';
+}
+
+
+/* ============ KEY DATES (authority inspections & handover) ============ */
+const KD_AUTH = [['WWTT', 'WWTT'], ['CFT', 'CFT'], ['RI', 'RI'], ['BCA TOP', 'BCA TOP'], ['BCA HHS', 'BCA HHS']];
+const KD_HAND = [['Lift handover', 'Lift H/O'], ['1st BIT/BO', '1st BIT/BO'], ['2nd BIT/BO', '2nd BIT/BO'], ['SPA', 'SPA'], ['Lock Up', 'Lock up'], ['Handover', 'Handover'], ['OCD (contract)', 'OCD']];
+const kdNorm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+function kdGet(b, n) { return (PLAN.blocks[b].milestones || []).find(m => kdNorm(m.n) === kdNorm(n)); }
+function kdCount(s) {
+  const d = s - DD;
+  if (d < 0) return 'date passed';
+  if (d === 0) return 'today';
+  if (d < 21) return `in ${d} day${d === 1 ? '' : 's'}`;
+  if (d < 7 * 26) return `in ${Math.round(d / 7)} wks`;
+  return `in ${(d / 30.44).toFixed(1)} mo`;
+}
+function renderKeyDates() {
+  const blks = BLOCKS();
+  const src = PLAN.source ? PLAN.source : 'built-in workbook';
+  $('#kdSub').textContent = `Sept2026 master schedule · ${src} · countdown from data date ${fdy(DD)}`;
+  const mode = UI.kdMode || 'table';
+  $$('#kdMode button').forEach(b => b.classList.toggle('on', b.dataset.m === mode));
+  const any = blks.some(b => (PLAN.blocks[b].milestones || []).length);
+  if (!any) { $('#kdBody').innerHTML = '<div class="empty"><b>No key dates found</b>Import the Archi &amp; ME Progress workbook. Dates are read from its Sept2026 sheet.</div>'; return; }
+  if (mode === 'tl') { renderKDTimeline(blks); return; }
+  const cols = [...KD_AUTH.map(c => [...c, 'au']), ...KD_HAND.map(c => [...c, 'ho'])];
+  let h = '<div class="kd-wrap"><table class="kd"><thead><tr class="g"><th></th>' +
+    `<th class="au gs" colspan="${KD_AUTH.length}">Authority inspections</th><th class="ho gs" colspan="${KD_HAND.length}">Handover</th><th class="gs"></th></tr>` +
+    '<tr class="n"><th>Block</th>' + cols.map(([, lab, g], i) => `<th class="${i === 0 || i === KD_AUTH.length ? 'gs' : ''}">${lab}</th>`).join('') + '<th class="gs" title="Days between Handover and the contract OCD">Buffer</th></tr></thead><tbody>';
+  blks.forEach(b => {
+    const next = cols.map(([n]) => kdGet(b, n)).filter(m => m && m.s >= DD && !/^OCD/.test(m.n)).sort((x, y) => x.s - y.s)[0];
+    h += `<tr data-b="${b}" class="${b === UI.blk ? 'sel' : ''}"><td class="b">${b}</td>`;
+    cols.forEach(([n, lab], i) => {
+      const m = kdGet(b, n); const gs = i === 0 || i === KD_AUTH.length ? ' gs' : '';
+      if (!m) { h += `<td class="${gs}"><span class="muted">–</span></td>`; return; }
+      const cls = [m.s < DD ? 'past' : '', m.s >= DD && m.s - DD <= 56 ? 'soon' : '', next === m ? 'nx' : ''].join(' ');
+      const rng = m.e && m.e !== m.s ? ` – ${fd(m.e)}` : '';
+      h += `<td class="${cls}${gs}" title="${esc(n)}: ${fdy(m.s)}${rng}${next === m ? ' · next key date for this block' : ''}"><span class="dt">${fdy(m.s)}</span><span class="cd">${kdCount(m.s)}</span></td>`;
+    });
+    const ho = kdGet(b, 'Handover'), ocd = kdGet(b, 'OCD (contract)');
+    const bf = ho && ocd ? ocd.s - ho.s : null;
+    h += `<td class="gs bf">${bf == null ? '<span class="muted">–</span>' : `<span class="dt ${bf < 0 ? 'neg' : ''}">${bf} d</span><span class="cd">${(bf / 30.44).toFixed(1)} mo</span>`}</td></tr>`;
+  });
+  h += '</tbody></table></div>';
+  h += `<div class="kd-key"><span><i style="box-shadow:inset 0 0 0 2px var(--signal);background:color-mix(in srgb,var(--signal) 10%,var(--panel))"></i>Next key date for the block</span><span><i style="background:var(--due)"></i>Within 8 weeks of the data date</span><span><i style="background:var(--none)"></i>Grey = planned date already passed</span><span class="muted">Click a block row to select it.</span></div>`;
+  $('#kdBody').innerHTML = h;
+}
+function renderKDTimeline(blks) {
+  const all = []; blks.forEach(b => (PLAN.blocks[b].milestones || []).forEach(m => { if (!/External Wall/i.test(m.n)) all.push(m.s); }));
+  let a = Math.min(DD, ...all), z = Math.max(...all);
+  a = s2d(a); a = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), 1) / 864e5 + 25569; z += 20;
+  const W = 1000, L = 64, R = 14, rowH = 46, TOP = 26, H = TOP + blks.length * rowH + 8;
+  const X = s => L + (s - a) / (z - a) * (W - L - R);
+  let g = '';
+  // month / quarter grid
+  let d = s2d(a);
+  for (let k = 0; k < 120; k++) {
+    const s = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + k, 1) / 864e5 + 25569; if (s > z) break;
+    const dd = s2d(s), q = dd.getUTCMonth() % 3 === 0;
+    g += `<line x1="${X(s)}" x2="${X(s)}" y1="${TOP - 6}" y2="${H - 8}" stroke="var(--rule2)" ${q ? '' : 'stroke-dasharray="2 3"'}/>`;
+    if (q) g += `<text x="${X(s) + 3}" y="${TOP - 10}" font-size="11" fill="var(--mute)">${MON[dd.getUTCMonth()]} ${String(dd.getUTCFullYear()).slice(2)}</text>`;
+  }
+  const auN = KD_AUTH.map(c => c[0]), hoN = ['1st BIT/BO', '2nd BIT/BO', 'SPA', 'Lock Up', 'Handover'];
+  blks.forEach((b, i) => {
+    const y = TOP + i * rowH + 10;
+    g += `<text x="0" y="${y + 13}" font-size="13" font-weight="700" fill="var(--ink)">${b}</text>`;
+    const au = auN.map(n => kdGet(b, n)).filter(Boolean), ho = hoN.map(n => kdGet(b, n)).filter(Boolean);
+    const band = (arr, col, yy, lab) => { if (!arr.length) return; const s0 = Math.min(...arr.map(m => m.s)), s1 = Math.max(...arr.map(m => m.e || m.s));
+      g += `<rect x="${X(s0) - 2}" y="${yy}" width="${Math.max(4, X(s1) - X(s0) + 4)}" height="10" rx="3" fill="${col}" opacity=".22"/>`;
+      arr.forEach(m => { g += `<g><title>${b} · ${m.n}: ${fdy(m.s)} (${kdCount(m.s)})</title><rect x="${X(m.s) - 2}" y="${yy}" width="4" height="10" rx="1" fill="${col}"/></g>`; });
+      g += `<text x="${X(s1) + 8}" y="${yy + 9}" font-size="10.5" fill="var(--ink2)">${lab} ${fd(s0)}–${fdy(s1)}</text>`; };
+    band(au, 'var(--wip)', y, 'Inspections');
+    band(ho, 'var(--done)', y + 16, 'Handover');
+    const lift = kdGet(b, 'Lift handover'); if (lift) g += `<g><title>${b} · Lift handover: ${fdy(lift.s)}</title><circle cx="${X(lift.s)}" cy="${y + 13}" r="4" fill="none" stroke="var(--ink2)" stroke-width="1.5"/></g>`;
+    const ocd = kdGet(b, 'OCD (contract)'); if (ocd) g += `<g><title>${b} · OCD (contract): ${fdy(ocd.s)}</title><path d="M${X(ocd.s)} ${y + 6}l7 7-7 7-7-7z" fill="var(--late)"/></g>`;
+    g += `<line x1="${L}" x2="${W - R}" y1="${y + 34}" y2="${y + 34}" stroke="var(--rule2)"/>`;
+  });
+  g += `<line x1="${X(DD)}" x2="${X(DD)}" y1="${TOP - 6}" y2="${H - 8}" stroke="var(--signal)" stroke-width="2"/><text x="${X(DD) + 4}" y="${H - 2}" font-size="10.5" font-weight="700" fill="var(--signal-ink)">Data date ${fdy(DD)}</text>`;
+  $('#kdBody').innerHTML = `<div class="kd-tl"><svg viewBox="0 0 ${W} ${H + 6}" role="img" aria-label="Authority inspection and handover windows by block">${g}</svg></div>
+   <div class="kd-key"><span><i style="background:var(--wip)"></i>Authority inspections (WWTT, CFT, RI, BCA TOP, BCA HHS)</span><span><i style="background:var(--done)"></i>Handover (BIT/BO, SPA, lock up, handover)</span><span><i style="border:1.5px solid var(--ink2);border-radius:50%"></i>Lift handover</span><span><i style="background:var(--late);transform:rotate(45deg) scale(.8)"></i>Contract OCD</span><span class="muted">Hover a tick for its date.</span></div>`;
 }
 
 /* ============ MATRIX ============ */
@@ -1007,17 +1137,24 @@ function tradeCodes(M) {
 }
 function renderLTM() {
   const M = blockModel(UI.blk, UI.kind); const codes = tradeCodes(M);
-  const res = UI.ltmRes || 'week', span = UI.ltmSpan || 'all';
+  const res = UI.ltmRes || 'week', win = UI.ltmWin == null ? 12 : +UI.ltmWin;
   $('#ltmTitle').textContent = `Takt plan · Blk ${UI.blk} ${UI.kind === 'DU' ? 'dwelling units' : 'common area'}`;
   $$('#ltmRes button').forEach(b => b.classList.toggle('on', b.dataset.r === res));
-  $$('#ltmSpan button').forEach(b => b.classList.toggle('on', b.dataset.s === span));
+  $$('#ltmWin button').forEach(b => b.classList.toggle('on', +b.dataset.w === win));
+  $$('#ltmNav button').forEach(b => b.disabled = win === 0);
   let t0 = Infinity, t1 = -Infinity;
   M.trades.forEach(t => { if (t.first != null) t0 = Math.min(t0, t.first); if (t.last != null) t1 = Math.max(t1, t.last); });
-  if (span === 'near') { t0 = Math.max(t0, DD - 84); t1 = Math.min(t1, DD + 84); }
+  // always cover the data date and leave room for a full window after the last planned work
+  t0 = Math.min(t0, DD - 7); t1 = Math.max(t1, DD + Math.max(win, 12) * 7);
+  if (win) t1 += win * 7;
   const step = res === 'week' ? 7 : 1;
-  t0 = res === 'week' ? wkStart(t0) : t0;
+  t0 = wkStart(t0);
   const nC = Math.ceil((t1 - t0 + 1) / step);
-  const cw = res === 'week' ? 46 : 18;
+  const wrapEl = $('#ltmWrap');
+  const avail = Math.max(320, (wrapEl.clientWidth || 1200) - 72);
+  const visCols = win === 0 ? nC : win * 7 / step;
+  const cw = Math.max(res === 'week' ? 12 : 4, Math.floor(avail / visCols));
+  const narCls = res === 'week' ? (cw < 18 ? ' nar xnar' : cw < 34 ? ' nar' : '') : (cw < 9 ? ' nar xnar' : cw < 16 ? ' nar' : '');
   const colOf = s => Math.floor((s - t0) / step);
   const ddCol = colOf(DD);
   // grid[li][col] = [{t, st}]
@@ -1037,8 +1174,8 @@ function renderLTM() {
     if (mk !== curM) { if (curM != null) hm += `<th colspan="${run}">${run * cw > 40 ? MON[(curM % 12)] + ' ' + String(Math.floor(curM / 12)).slice(2) : ''}</th>`; curM = mk; run = 0; monthStart[c] = 1; }
     run++;
     const cur = c === ddCol ? ' cur' : '';
-    if (res === 'week') hw += `<th class="${cur.trim()}" style="min-width:${cw}px;width:${cw}px">W${String(c + 1)}<small>${fdm(s)}</small></th>`;
-    else hw += `<th class="${cur.trim()}" style="min-width:${cw}px;width:${cw}px">${d.getUTCDate()}<small>${'SMTWTFS'[d.getUTCDay()]}</small></th>`;
+    if (res === 'week') hw += `<th class="${cur.trim()}" style="min-width:${cw}px;width:${cw}px;max-width:${cw}px" title="Week of ${fdy(s)}">${cw < 26 ? fdm(s).slice(0, 2) : 'W' + (c + 1)}<small>${fdm(s)}</small></th>`;
+    else hw += `<th class="${cur.trim()}" style="min-width:${cw}px;width:${cw}px;max-width:${cw}px" title="${fdy(s)}">${d.getUTCDate()}<small>${'SMTWTFS'[d.getUTCDay()]}</small></th>`;
   }
   hm += `<th colspan="${run}">${MON[curM % 12]} ${String(Math.floor(curM / 12)).slice(2)}</th></tr>`;
   hw += '</tr>';
@@ -1059,18 +1196,38 @@ function renderLTM() {
     }
     body += '</tr>';
   });
-  $('#ltmWrap').innerHTML = `<table class="ltm ${res}"><thead>${hm}${hw}</thead><tbody>${body}</tbody></table>`;
-  $('#ltmWrap')._g = { grid, t0, step, M };
+  $('#ltmWrap').innerHTML = `<table class="ltm ${res}${narCls}" style="table-layout:fixed"><thead>${hm}${hw}</thead><tbody>${body}</tbody></table>`;
+  $('#ltmWrap')._g = { grid, t0, step, M, cw, nC, visCols, win };
   // codes legend
   $('#ltmCodes').innerHTML = '<b style="font-size:12px;margin-right:4px">Wagon codes</b>' + M.trades.map(t => `<span data-t="${esc(t.name)}" class="${ltmHL === t.name ? 'on' : ''}" title="Highlight ${esc(t.name)}"><code style="background:${t.color}">${codes[t.name]}</code>${esc(t.name)}</span>`).join('');
-  const sig = UI.blk + UI.kind + res + span;
-  if (ltmLastSig !== sig) { ltmLastSig = sig; requestAnimationFrame(() => ltmJump(true)); }
+  const sig = UI.blk + UI.kind + res;
+  if (ltmLastSig !== sig || ltmLeftS == null) { ltmLastSig = sig; requestAnimationFrame(() => ltmJump(true)); }
+  else { const top = wrapEl.scrollTop; ltmScrollToDate(win ? ltmLeftS : -1e9, true); wrapEl.scrollTop = top; ltmRangeLabel(); }
+}
+let ltmLeftS = null;
+function ltmColX(c) { const w = $('#ltmWrap'); const th = w.querySelectorAll('tr.w th')[c]; return th ? th.offsetLeft - w.querySelector('tr.w th').offsetLeft : 0; }
+function ltmScrollToDate(s, instant) {
+  const w = $('#ltmWrap'), g = w._g; if (!g) return;
+  const c = Math.max(0, Math.min(g.nC - 1, Math.floor((s - g.t0) / g.step)));
+  w.scrollTo({ left: c * g.cw, behavior: instant ? 'auto' : 'smooth' });
+}
+function ltmRangeLabel() {
+  const w = $('#ltmWrap'), g = w._g; if (!g) return;
+  const c0 = Math.round(w.scrollLeft / g.cw), n = Math.max(1, Math.floor((w.clientWidth - 72) / g.cw));
+  const a = g.t0 + c0 * g.step, z = g.t0 + Math.min(g.nC, c0 + n) * g.step - 1;
+  ltmLeftS = a;
+  const wk = Math.round((z - a + 1) / 7);
+  const ddIn = DD >= a && DD <= z;
+  $('#ltmRange').innerHTML = `${fdy(a)} – ${fdy(z)}<small>${wk} weeks on screen${g.step === 7 ? ` · W${c0 + 1}–W${Math.min(g.nC, c0 + n)}` : ''}${ddIn ? ' · includes data date' : DD < a ? ` · ${Math.round((a - DD) / 7)} wks after data date` : ` · ${Math.round((DD - z) / 7)} wks before data date`}</small>`;
 }
 function ltmJump(instant) {
-  const w = $('#ltmWrap'); const th = w.querySelector('tr.w th.cur');
+  const w = $('#ltmWrap'), g = w._g;
   const cells = [...w.querySelectorAll('td.k.cur[data-l]')];
   const top = cells.length ? Math.min(...cells.map(c => c.offsetTop)) - 160 : 0;
-  w.scrollTo({ left: th ? Math.max(0, th.offsetLeft - w.clientWidth * 0.45) : 0, top: Math.max(0, top), behavior: instant === true ? 'auto' : 'smooth' });
+  // put the current week at the left edge so the window shows the coming weeks
+  const left = g && g.win ? Math.max(0, Math.floor((wkStart(DD) - g.t0) / g.step) * g.cw) : 0;
+  w.scrollTo({ left, top: Math.max(0, top), behavior: instant === true ? 'auto' : 'smooth' });
+  if (instant === true) ltmRangeLabel();
 }
 function openLTMCell(li, c) {
   const g = $('#ltmWrap')._g; const L = g.grid[li][c]; if (!L) return;
@@ -1617,10 +1774,24 @@ $('#mxWrap').onmousemove = e => {
 };
 $('#mxWrap').onmouseleave = () => tip.style.display = 'none';
 $('#ltmRes').onclick = e => { const b = e.target.closest('[data-r]'); if (!b) return; UI.ltmRes = b.dataset.r; saveUI(); renderLTM(); };
-$('#ltmSpan').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; UI.ltmSpan = b.dataset.s; saveUI(); renderLTM(); };
+$('#ltmWin').onclick = e => { const b = e.target.closest('[data-w]'); if (!b) return; UI.ltmWin = +b.dataset.w; saveUI(); renderLTM(); };
+$('#ltmNav').onclick = e => { const b = e.target.closest('[data-d]'); if (!b) return; const w = $('#ltmWrap'), g = w._g; if (!g || !g.win) return;
+  const c0 = Math.round(w.scrollLeft / g.cw); const c = Math.max(0, c0 + (+b.dataset.d) * g.visCols);
+  w.scrollTo({ left: c * g.cw, behavior: 'smooth' }); };
+$('#ltmWrap').addEventListener('scroll', () => { if (!ltmRAF) ltmRAF = requestAnimationFrame(() => { ltmRAF = 0; ltmRangeLabel(); }); }, { passive: true });
+let ltmRAF = 0, ltmDrag = null, ltmDragged = false;
+$('#ltmWrap').addEventListener('pointerdown', e => { if (e.button !== 0) return; ltmDrag = { x: e.clientX, l: $('#ltmWrap').scrollLeft }; ltmDragged = false; });
+window.addEventListener('pointermove', e => { if (!ltmDrag) return; const dx = e.clientX - ltmDrag.x; if (!ltmDragged && Math.abs(dx) < 6) return;
+  ltmDragged = true; $('#ltmWrap').classList.add('drag'); $('#ltmWrap').scrollLeft = ltmDrag.l - dx; tip.style.display = 'none'; });
+window.addEventListener('pointerup', () => { if (!ltmDrag) return; ltmDrag = null; $('#ltmWrap').classList.remove('drag'); setTimeout(() => ltmDragged = false, 0); });
+let ltmRsz = 0;
+window.addEventListener('resize', () => { clearTimeout(ltmRsz); ltmRsz = setTimeout(() => { if (UI.view === 'ltm') renderLTM(); else if (UI.view === 'overview') renderKeyDates(); }, 150); });
+$('#kdMode').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; UI.kdMode = b.dataset.m; saveUI(); renderKeyDates(); };
+$('#kdImp').onclick = () => $('#mxImpIn').click();
+$('#kdBody').onclick = e => { const r = e.target.closest('tr[data-b]'); if (!r) return; UI.blk = r.dataset.b; saveUI(); render(); };
 $('#ltmJump').onclick = () => ltmJump();
 $('#ltmCodes').onclick = e => { const s = e.target.closest('[data-t]'); if (!s) return; ltmHL = ltmHL === s.dataset.t ? null : s.dataset.t; renderLTM(); };
-$('#ltmWrap').onclick = e => { const lv = e.target.closest('td.lv'); if (lv) { openLevel(+lv.dataset.l); return; } const c = e.target.closest('td.k[data-l]'); if (c) openLTMCell(+c.dataset.l, +c.dataset.c); };
+$('#ltmWrap').onclick = e => { if (ltmDragged) return; const lv = e.target.closest('td.lv'); if (lv) { openLevel(+lv.dataset.l); return; } const c = e.target.closest('td.k[data-l]'); if (c) openLTMCell(+c.dataset.l, +c.dataset.c); };
 $('#ltmWrap').onmousemove = e => {
   const c = e.target.closest('td.k[data-l]'); if (!c) { tip.style.display = 'none'; return; }
   const g = $('#ltmWrap')._g; const L = g.grid[+c.dataset.l][+c.dataset.c]; const a = g.t0 + (+c.dataset.c) * g.step;
