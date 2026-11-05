@@ -141,6 +141,16 @@ table.mx tbody tr:hover .lv{background:var(--panel2)}
 td.c{width:38px;height:24px;border-right:1px solid var(--rule2);border-bottom:1px solid var(--rule2);cursor:pointer;position:relative;text-align:center;font-weight:600;font-size:10.5px;color:var(--ink2)}
 td.c .f{position:absolute;inset:2px;border-radius:3px;background:var(--none)}
 td.c .tx{position:relative;z-index:1;line-height:24px}
+table.mx.both td.c{height:34px}
+table.mx.both td.c .tx{display:block;line-height:13px;font-size:10px}
+table.mx.both td.c .tx i{display:block;font-style:normal;font-weight:500;opacity:.8}
+table.mx.ct td.c{height:34px}
+table.mx.ct td.c .tx{display:block;line-height:13px;font-size:10px}
+table.mx.ct.both td.c{height:44px}
+table.mx td.c .tx u{display:block;text-decoration:none;font-size:9.5px;font-weight:700;color:var(--wip)}
+table.mx td.c.done .tx u{color:#fff;opacity:.9}
+table.mx td.c.late.todo .tx u{color:var(--late)}
+.hol-list{width:100%;min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;border:1px solid var(--rule);border-radius:6px;background:var(--panel2);padding:8px;color:var(--ink)}
 td.c.done .f{background:var(--done-bg)}
 td.c.done .tx{color:#fff}
 td.c.wip .f{background:linear-gradient(90deg,var(--wip) var(--p),color-mix(in srgb,var(--wip) 18%,var(--panel)) var(--p))}
@@ -292,6 +302,23 @@ table.kd tbody tr{cursor:pointer}
 .ltm-nav .rng{font-size:13px;font-weight:600}
 .ltm-nav .rng small{font-weight:500;color:var(--mute);margin-left:6px}
 .ltm-wrap.drag{cursor:grabbing;user-select:none}
+.ltm-nav .datebox input{width:132px}
+.ltm-nav .rng{min-width:0}
+td.k.sel,td.c.sel{position:relative}
+td.k.sel::after,td.c.sel::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--wip) 26%,transparent);box-shadow:inset 0 0 0 2px var(--wip);pointer-events:none}
+.selmode td.k,.selmode td.c{cursor:cell}
+.selmode{user-select:none}
+.ibtn.sm.on{background:var(--wip);border-color:var(--wip);color:#fff}
+.selbar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:35;display:none;align-items:center;gap:10px;background:var(--ink);color:#fff;padding:8px 10px 8px 16px;border-radius:10px;box-shadow:0 10px 30px -10px rgba(0,0,0,.5);font-size:13px;max-width:calc(100vw - 32px);flex-wrap:wrap}
+.selbar.on{display:flex}
+.selbar b{font-weight:700}
+.selbar .ibtn{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
+.selbar .ibtn.pri{background:var(--signal);color:#1D2A2E;border-color:var(--signal)}
+.bk-tr{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;padding:7px 0;border-bottom:1px solid var(--rule2);font-size:13px}
+.bk-tr .lv{color:var(--mute);font-size:12px}
+.bk-opt{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:6px 0}
+.bk-opt input{margin-top:3px}
+.hint{font-size:12px;color:var(--mute);margin:-8px 0 12px}
 table.ltm.nar thead tr.w th small{display:none}
 table.ltm.nar thead tr.w th{font-size:9px}
 table.ltm.xnar thead tr.w th{font-size:0}
@@ -441,14 +468,16 @@ dl.facts dt{color:var(--mute)} dl.facts dd{margin:0;font-weight:600}
       <p>Floors top to bottom, trades left to right in the new sequence. Click a cell to update units; click a trade name to update it across floors.</p></div>
       <div class="tools">
         <button class="ibtn sm" id="mxJump">Go to data date</button>
+        <button class="ibtn sm selBtn" title="Click or drag across cells to pick several floor-trades, then set their actual start and finish dates together. Shortcut: Ctrl/⌘-click a cell.">Select cells</button>
         <button class="ibtn sm" id="mxImp" title="Load an Archi & ME Progress workbook">Import progress workbook</button>
         <button class="ibtn sm pri" id="mxExp" title="Download the Archi & ME Progress workbook with current unit tallies">Export progress workbook</button>
         <input type="file" id="mxImpIn" accept=".xlsx,.xlsm" class="hide">
       </div></div>
     <div class="mx-tools">
-      <div class="seg" id="mxShow"><button data-m="units" class="on">Units</button><button data-m="finish">Plan finish</button><button data-m="start">Plan start</button></div>
+      <div class="seg" id="mxShow"><button data-m="units" class="on">Units</button><button data-m="finish">Plan finish</button><button data-m="start">Plan start</button><button data-m="both" title="Show planned start (top) and planned finish (bottom) in every cell">Start + finish</button></div>
       <div id="mxPhases" style="display:flex;gap:6px;flex-wrap:wrap"></div>
       <label class="chip tog" id="mxLateOnly" style="cursor:pointer"><input type="checkbox" style="margin:0"> Floors with late work only</label>
+      <label class="chip tog" id="mxCT" style="cursor:pointer" title="Working days from plan start to plan finish, counting both days, excluding Sundays and Singapore public holidays. Shown with Plan finish, Plan start and Start + finish."><input type="checkbox" style="margin:0"> Show cycle time (working days)</label>
     </div>
     <div class="legend" style="margin-bottom:10px">
       <span><i class="sw" style="background:var(--done-bg)"></i>Complete</span>
@@ -467,13 +496,16 @@ dl.facts dt{color:var(--mute)} dl.facts dd{margin:0;font-weight:600}
       <p>Location-time matrix: floors down the side, time across the top. Each cell shows the trade wagons in that floor for that period. Solid = finished, striped base = in progress, pale = still to do, red outline = behind plan.</p></div>
       <div class="tools">
         <div class="seg" id="ltmRes"><button data-r="week" class="on">Weeks</button><button data-r="day">Days</button></div>
-        <div class="seg" id="ltmWin" title="How many weeks fit on screen"><button data-w="12" class="on">12 wks</button><button data-w="24">24 wks</button><button data-w="52">52 wks</button><button data-w="0">All</button></div>
+        <div class="seg" id="ltmWin" title="How many weeks fit on screen"><button data-w="12" class="on">12 wks</button><button data-w="24">24 wks</button><button data-w="52">52 wks</button><button data-w="0">All</button><button data-w="c" title="Show the From–To dates you pick">Custom</button></div>
         <button class="ibtn sm" id="ltmJump">Go to data date</button>
+        <button class="ibtn sm selBtn" title="Click or drag across cells to pick several floor-trades, then set their actual start and finish dates together. Shortcut: Ctrl/⌘-click a cell.">Select cells</button>
       </div></div>
     <div class="ltm-nav">
       <div class="seg" id="ltmNav"><button data-d="-1" title="Back one window">&#9664; Back</button><button data-d="1" title="Forward one window">Next &#9654;</button></div>
+      <label class="datebox">From <input type="date" id="ltmFrom"></label>
+      <label class="datebox">To <input type="date" id="ltmTo"></label>
       <span class="rng" id="ltmRange"></span>
-      <span class="muted" style="font-size:12px;margin-left:auto">Drag the chart sideways, or Shift + scroll, to move along the timeline</span>
+      <span class="muted" id="ltmHint" style="font-size:12px;margin-left:auto">Drag the chart sideways, or Shift + scroll, to move along the timeline</span>
     </div>
     <div class="ltm-wrap" id="ltmWrap"></div>
     <div class="ltm-codes" id="ltmCodes"></div>
@@ -596,6 +628,12 @@ dl.facts dt{color:var(--mute)} dl.facts dd{margin:0;font-weight:600}
         <p class="muted" style="margin:6px 0 0">Edits are saved in this browser automatically. Download a backup before switching computers or clearing browser data.</p>
         <button class="ibtn sm" id="resetAll" style="color:var(--late)">Clear all edits and Last Planner records</button>
       </div></div>
+      <div class="panel"><div class="ph"><h3>Non-working days for cycle time</h3></div><div class="bd">
+        <p class="muted" style="margin:0 0 8px">Cycle time counts working days from plan start to plan finish, counting both days. Sundays and the public holidays below are excluded. When a holiday falls on a Sunday, the Monday after is excluded too. 2026 and 2027 come from MOM. Add later years here when MOM announces them, one per line as <code>YYYY-MM-DD Name</code>.</p>
+        <textarea id="holList" class="hol-list" spellcheck="false"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+          <button class="ibtn sm pri" id="holSave">Save holidays</button><button class="ibtn sm" id="holReset">Restore MOM list</button><span class="muted" id="holMsg" style="font-size:12px"></span></div>
+      </div></div>
     </div>
   </section>
 </main>
@@ -604,6 +642,7 @@ dl.facts dt{color:var(--mute)} dl.facts dd{margin:0;font-weight:600}
 <aside class="drawer" id="drawer" aria-hidden="true"><div class="dr-h"><div><h3 id="drT"></h3><div class="sub" id="drS"></div></div><button class="x" id="drX" aria-label="Close">×</button></div><div class="dr-b" id="drB"></div><div class="dr-f" id="drF"></div></aside>
 <div class="tip" id="tip"></div>
 <div class="toast" id="toast"></div>
+<div class="selbar" id="selBar"><span id="selTxt"></span><button class="ibtn sm pri" id="selSet">Set actual dates…</button><button class="ibtn sm" id="selClr">Clear selection</button></div>
 
 <script>
 // Shared parser for "Archi & ME Progress.xlsx" — runs in Node and in the browser.
@@ -939,6 +978,7 @@ function render() {
   else if (v === 'seq') renderSeq();
   else if (v === 'lps') renderLPS();
   else if (v === 'data') renderData();
+  selSync();
 }
 
 /* ============ OVERVIEW ============ */
@@ -1073,6 +1113,47 @@ function renderKDTimeline(blks) {
    <div class="kd-key"><span><i style="background:var(--wip)"></i>Authority inspections (WWTT, CFT, RI, BCA TOP, BCA HHS)</span><span><i style="background:var(--done)"></i>Handover (BIT/BO, SPA, lock up, handover)</span><span><i style="border:1.5px solid var(--ink2);border-radius:50%"></i>Lift handover</span><span><i style="background:var(--late);transform:rotate(45deg) scale(.8)"></i>Contract OCD</span><span class="muted">Hover a tick for its date.</span></div>`;
 }
 
+
+/* ============ WORKING DAYS (Sundays + Singapore public holidays) ============ */
+const SG_HOL_DEFAULT = `2026-01-01 New Year's Day
+2026-02-17 Chinese New Year
+2026-02-18 Chinese New Year
+2026-03-21 Hari Raya Puasa
+2026-04-03 Good Friday
+2026-05-01 Labour Day
+2026-05-27 Hari Raya Haji
+2026-05-31 Vesak Day
+2026-08-09 National Day
+2026-11-08 Deepavali
+2026-12-25 Christmas Day
+2027-01-01 New Year's Day
+2027-02-06 Chinese New Year
+2027-02-07 Chinese New Year
+2027-03-10 Hari Raya Puasa
+2027-03-26 Good Friday
+2027-05-01 Labour Day
+2027-05-17 Hari Raya Haji
+2027-05-20 Vesak Day
+2027-08-09 National Day
+2027-10-28 Deepavali
+2027-12-25 Christmas Day`;
+let HOL_TXT = LS.get('holidays', null) || SG_HOL_DEFAULT, HOL = null;
+function parseHol(txt) {
+  const set = new Set(), bad = [];
+  txt.split(/\r?\n/).forEach(l => { l = l.trim(); if (!l) return; const m = l.match(/^(\d{4}-\d{2}-\d{2})/); if (!m) { bad.push(l); return; }
+    const s = iso2s(m[1]); if (s == null || isNaN(s)) { bad.push(l); return; } set.add(s);
+    if (s2d(s).getUTCDay() === 0) set.add(s + 1); });   // Sunday holiday → Monday off
+  return { set, bad };
+}
+function holSet() { if (!HOL) HOL = parseHol(HOL_TXT).set; return HOL; }
+function workDays(a, b) {
+  if (a == null || b == null) return null; if (b < a) return 0;
+  const H = holSet(); let n = 0;
+  for (let s = a; s <= b; s++) if (s2d(s).getUTCDay() !== 0 && !H.has(s)) n++;
+  return n;
+}
+function holLastYear() { let y = 0; holSet().forEach(s => { y = Math.max(y, s2d(s).getUTCFullYear()); }); return y; }
+
 /* ============ MATRIX ============ */
 let mxHL = null, mxLastSig = null, flLastSig = null;
 function renderMatrix() {
@@ -1082,9 +1163,11 @@ function renderMatrix() {
   const phList = [...new Set(M.trades.map(t => t.ph))];
   $('#mxPhases').innerHTML = phList.map(p => `<span class="chip tog${UI.phOff[p] ? ' off' : ''}" data-p="${p}"><i style="background:${PHASES[PHX[p]].c}"></i>${PHASES[PHX[p]].name}</span>`).join('');
   const lateOnly = $('#mxLateOnly input').checked;
+  $('#mxCT input').checked = !!UI.mxCT;
+  const showCT = !!UI.mxCT && UI.mxShow !== 'units';
   const trades = M.trades.filter(t => !UI.phOff[t.ph]);
   const ws = wkStart(todayS());
-  let h = '<table class="mx"><thead><tr><th class="lv" style="vertical-align:bottom;padding-bottom:6px;text-align:left"><span class="muted" style="font-size:11px">Level · cast</span></th>';
+  let h = `<table class="mx${UI.mxShow === 'both' ? ' both' : ''}${showCT ? ' ct' : ''}"><thead>` + '<tr><th class="lv" style="vertical-align:bottom;padding-bottom:6px;text-align:left"><span class="muted" style="font-size:11px">Level · cast</span></th>';
   trades.forEach(t => {
     h += `<th class="tr${mxHL === t.name ? ' hl' : ''}" data-t="${esc(t.name)}" title="${esc(t.name)}"><div class="th-in"><div class="band" style="background:${PHASES[PHX[t.ph]].c}"></div><div class="sw2" style="background:${t.color}"></div><div class="nm">${esc(t.name)}</div><div class="no">${t.j + 1}</div></div></th>`;
   });
@@ -1101,14 +1184,18 @@ function renderMatrix() {
       const cls = ['c', s.status, s.late ? 'late' : '', s.due ? 'due' : '', s.now ? 'now' : '', s.blocked ? 'blk' : '', mxHL === t.name ? 'hl' : ''].join(' ');
       let tx = '';
       if (UI.mxShow === 'units') tx = s.status === 'done' ? '' : s.status === 'wip' ? `${s.done}/${s.tot}` : '';
-      else if (UI.mxShow === 'finish') tx = fdm(s.e); else tx = fdm(s.s);
-      h += `<td class="${cls}" style="--p:${Math.round(s.pct * 100)}%" data-t="${t.j}" data-l="${li}"><div class="f"></div><span class="tx">${tx}</span></td>`;
+      else if (UI.mxShow === 'finish') tx = fdm(s.e);
+      else if (UI.mxShow === 'both') tx = `${fdm(s.s)}<i>${fdm(s.e)}</i>`;
+      else tx = fdm(s.s);
+      if (showCT) tx += `<u>${workDays(s.s, s.e)}d</u>`;
+      h += `<td class="${cls}" style="--p:${Math.round(s.pct * 100)}%" data-t="${t.j}" data-l="${li}" title="${esc(t.name)} · L${M.levels[li]}\nPlan ${fdy(s.s)} → ${fdy(s.e)}\nCycle time ${workDays(s.s, s.e)} working days (excl. Sundays & public holidays)"><div class="f"></div><span class="tx">${tx}</span></td>`;
     });
     h += '</tr>';
   });
   h += '</tbody></table>';
   const sig = UI.blk + UI.kind;
   $('#mxWrap').innerHTML = h;
+  if (selSig !== null) markSel();
   if (mxLastSig !== sig) { mxLastSig = sig; requestAnimationFrame(() => mxJumpToDD(true)); }
 }
 function mxJumpToDD(instant) {
@@ -1137,22 +1224,27 @@ function tradeCodes(M) {
 }
 function renderLTM() {
   const M = blockModel(UI.blk, UI.kind); const codes = tradeCodes(M);
-  const res = UI.ltmRes || 'week', win = UI.ltmWin == null ? 12 : +UI.ltmWin;
+  const res = UI.ltmRes || 'week';
+  const custom = UI.ltmWin === 'c' && UI.ltmFrom && UI.ltmTo;
+  const win = custom ? 'c' : (UI.ltmWin == null || UI.ltmWin === 'c') ? 12 : +UI.ltmWin;
+  const cFrom = custom ? iso2s(UI.ltmFrom) : null, cTo = custom ? iso2s(UI.ltmTo) : null;
+  const spanDays = custom ? Math.max(7, cTo - cFrom + 1) : (win || 12) * 7;
   $('#ltmTitle').textContent = `Takt plan · Blk ${UI.blk} ${UI.kind === 'DU' ? 'dwelling units' : 'common area'}`;
   $$('#ltmRes button').forEach(b => b.classList.toggle('on', b.dataset.r === res));
-  $$('#ltmWin button').forEach(b => b.classList.toggle('on', +b.dataset.w === win));
+  $$('#ltmWin button').forEach(b => b.classList.toggle('on', b.dataset.w === String(win)));
   $$('#ltmNav button').forEach(b => b.disabled = win === 0);
   let t0 = Infinity, t1 = -Infinity;
   M.trades.forEach(t => { if (t.first != null) t0 = Math.min(t0, t.first); if (t.last != null) t1 = Math.max(t1, t.last); });
   // always cover the data date and leave room for a full window after the last planned work
-  t0 = Math.min(t0, DD - 7); t1 = Math.max(t1, DD + Math.max(win, 12) * 7);
-  if (win) t1 += win * 7;
+  t0 = Math.min(t0, DD - 7); t1 = Math.max(t1, DD + Math.max(spanDays, 84));
+  if (custom) { t0 = Math.min(t0, cFrom - 7); t1 = Math.max(t1, cTo); }
+  if (win) t1 += spanDays;
   const step = res === 'week' ? 7 : 1;
   t0 = wkStart(t0);
   const nC = Math.ceil((t1 - t0 + 1) / step);
   const wrapEl = $('#ltmWrap');
   const avail = Math.max(320, (wrapEl.clientWidth || 1200) - 72);
-  const visCols = win === 0 ? nC : win * 7 / step;
+  const visCols = win === 0 ? nC : Math.ceil(spanDays / step);
   const cw = Math.max(res === 'week' ? 12 : 4, Math.floor(avail / visCols));
   const narCls = res === 'week' ? (cw < 18 ? ' nar xnar' : cw < 34 ? ' nar' : '') : (cw < 9 ? ' nar xnar' : cw < 16 ? ' nar' : '');
   const colOf = s => Math.floor((s - t0) / step);
@@ -1198,27 +1290,33 @@ function renderLTM() {
   });
   $('#ltmWrap').innerHTML = `<table class="ltm ${res}${narCls}" style="table-layout:fixed"><thead>${hm}${hw}</thead><tbody>${body}</tbody></table>`;
   $('#ltmWrap')._g = { grid, t0, step, M, cw, nC, visCols, win };
+  if (selSig !== null) markSel();
   // codes legend
   $('#ltmCodes').innerHTML = '<b style="font-size:12px;margin-right:4px">Wagon codes</b>' + M.trades.map(t => `<span data-t="${esc(t.name)}" class="${ltmHL === t.name ? 'on' : ''}" title="Highlight ${esc(t.name)}"><code style="background:${t.color}">${codes[t.name]}</code>${esc(t.name)}</span>`).join('');
   const sig = UI.blk + UI.kind + res;
-  if (ltmLastSig !== sig || ltmLeftS == null) { ltmLastSig = sig; requestAnimationFrame(() => ltmJump(true)); }
+  if (ltmForceS != null) { const s0 = ltmForceS; ltmForceS = null; ltmLastSig = sig; requestAnimationFrame(() => { ltmScrollToDate(s0, true); ltmRangeLabel(); }); }
+  else if (ltmLastSig !== sig || ltmLeftS == null) { ltmLastSig = sig; requestAnimationFrame(() => custom ? (ltmScrollToDate(cFrom, true), ltmRangeLabel()) : ltmJump(true)); }
   else { const top = wrapEl.scrollTop; ltmScrollToDate(win ? ltmLeftS : -1e9, true); wrapEl.scrollTop = top; ltmRangeLabel(); }
 }
-let ltmLeftS = null;
+let ltmLeftS = null, ltmForceS = null;
 function ltmColX(c) { const w = $('#ltmWrap'); const th = w.querySelectorAll('tr.w th')[c]; return th ? th.offsetLeft - w.querySelector('tr.w th').offsetLeft : 0; }
 function ltmScrollToDate(s, instant) {
   const w = $('#ltmWrap'), g = w._g; if (!g) return;
   const c = Math.max(0, Math.min(g.nC - 1, Math.floor((s - g.t0) / g.step)));
   w.scrollTo({ left: c * g.cw, behavior: instant ? 'auto' : 'smooth' });
 }
+let ltmSaveT = 0;
 function ltmRangeLabel() {
   const w = $('#ltmWrap'), g = w._g; if (!g) return;
-  const c0 = Math.round(w.scrollLeft / g.cw), n = Math.max(1, Math.floor((w.clientWidth - 72) / g.cw));
+  const c0 = Math.round(w.scrollLeft / g.cw), n = g.win ? g.visCols : Math.max(1, Math.floor((w.clientWidth - 72) / g.cw));
   const a = g.t0 + c0 * g.step, z = g.t0 + Math.min(g.nC, c0 + n) * g.step - 1;
   ltmLeftS = a;
+  if (document.activeElement !== $('#ltmFrom')) $('#ltmFrom').value = s2iso(a);
+  if (document.activeElement !== $('#ltmTo')) $('#ltmTo').value = s2iso(z);
+  if (g.win === 'c') { UI.ltmFrom = s2iso(a); UI.ltmTo = s2iso(z); clearTimeout(ltmSaveT); ltmSaveT = setTimeout(saveUI, 400); }
   const wk = Math.round((z - a + 1) / 7);
   const ddIn = DD >= a && DD <= z;
-  $('#ltmRange').innerHTML = `${fdy(a)} – ${fdy(z)}<small>${wk} weeks on screen${g.step === 7 ? ` · W${c0 + 1}–W${Math.min(g.nC, c0 + n)}` : ''}${ddIn ? ' · includes data date' : DD < a ? ` · ${Math.round((a - DD) / 7)} wks after data date` : ` · ${Math.round((DD - z) / 7)} wks before data date`}</small>`;
+  $('#ltmRange').innerHTML = `<small style="margin-left:0">${wk} weeks on screen${g.step === 7 ? ` · W${c0 + 1}–W${Math.min(g.nC, c0 + n)}` : ''}${ddIn ? ' · includes data date' : DD < a ? ` · ${Math.round((a - DD) / 7)} wks after data date` : ` · ${Math.round((DD - z) / 7)} wks before data date`}</small>`;
 }
 function ltmJump(instant) {
   const w = $('#ltmWrap'), g = w._g;
@@ -1236,6 +1334,129 @@ function openLTMCell(li, c) {
   const rows = L.map(({ t, st }) => `<div class="lvl-row" style="grid-template-columns:1fr auto;cursor:pointer" data-key="${esc(st.key)}"><span><code style="background:${t.color};color:#fff;font-weight:700;padding:0 4px;border-radius:3px;margin-right:6px">${codes[t.name]}</code>${esc(t.name)}<br><span class="muted">${fd(st.s)}–${fd(st.e)} · ${st.done}/${st.tot} units${st.late ? ' · <span class="neg">behind</span>' : ''}</span></span><span class="ibtn sm">Update</span></div>`).join('');
   openDrawer(`Level ${g.M.levels[li]}`, `Blk ${g.M.blk} · ${g.step === 7 ? 'week of ' + fdy(a) : fdy(a)} · ${L.length} trades in this location`, `<div class="lvl-rows">${rows}</div>`);
   $('#drB').onclick = e => { const r = e.target.closest('[data-key]'); if (r) openCell(r.dataset.key); };
+}
+
+
+/* ============ MULTI-SELECT + BULK ACTUAL DATES ============ */
+let SEL = new Set(), selSig = null, selDrag = null, selJustDragged = false;
+const selOn = () => !!UI.selMode;
+function tdKeys(td) {
+  if (td.matches('#ltmWrap td.k[data-l][data-c]')) { const g = $('#ltmWrap')._g; return (g.grid[+td.dataset.l][+td.dataset.c] || []).map(x => x.st.key); }
+  if (td.matches('#mxWrap td.c[data-t][data-l]')) { const M = blockModel(UI.blk, UI.kind); return [keyOf(M.blk, M.kind, M.levels[+td.dataset.l], M.trades[+td.dataset.t].name)]; }
+  return [];
+}
+function selCells(wrap) { return [...wrap.querySelectorAll(wrap.id === 'ltmWrap' ? 'td.k[data-l][data-c]' : 'td.c[data-t][data-l]')]; }
+function markSel(preview) {
+  const S = preview || SEL;
+  ['#ltmWrap', '#mxWrap'].forEach(id => { const w = $(id); if (!w || !w.querySelector('table')) return; selCells(w).forEach(td => td.classList.toggle('sel', tdKeys(td).some(k => S.has(k)))); });
+  updSelBar(S);
+}
+function updSelBar(S) {
+  S = S || SEL;
+  const show = S.size > 0 && (UI.view === 'ltm' || UI.view === 'matrix');
+  $('#selBar').classList.toggle('on', show);
+  if (!show) return;
+  const items = [...S].map(findStateByKey).filter(Boolean);
+  const nt = new Set(items.map(s => s.t.name)).size, lv = new Set(items.map(s => s.lv)).size;
+  $('#selTxt').innerHTML = `<b>${items.length}</b> floor-trade${items.length === 1 ? '' : 's'} selected · ${nt} trade${nt === 1 ? '' : 's'} on ${lv} floor${lv === 1 ? '' : 's'}`;
+}
+function selSync() {
+  const sig = UI.blk + UI.kind; if (selSig !== sig) { SEL.clear(); selSig = sig; }
+  $$('.selBtn').forEach(b => { b.classList.toggle('on', selOn()); b.textContent = selOn() ? 'Selecting… (done)' : 'Select cells'; });
+  ['#ltmWrap', '#mxWrap'].forEach(id => $(id).classList.toggle('selmode', selOn()));
+  if ($('#ltmHint')) $('#ltmHint').textContent = selOn() ? 'Click cells to pick them, or drag to pick a block of floors and weeks' : 'Drag the chart sideways, or Shift + scroll, to move along the timeline';
+  markSel();
+}
+function toggleKeys(keys) { const allIn = keys.length && keys.every(k => SEL.has(k)); keys.forEach(k => allIn ? SEL.delete(k) : SEL.add(k)); markSel(); }
+function rectKeys(wrap, a, b) {
+  const r0 = Math.min(a.parentElement.rowIndex, b.parentElement.rowIndex), r1 = Math.max(a.parentElement.rowIndex, b.parentElement.rowIndex);
+  const x0 = Math.min(a.offsetLeft, b.offsetLeft), x1 = Math.max(a.offsetLeft, b.offsetLeft);
+  const out = new Set();
+  selCells(wrap).forEach(td => { const ri = td.parentElement.rowIndex; if (ri >= r0 && ri <= r1 && td.offsetLeft >= x0 && td.offsetLeft <= x1) tdKeys(td).forEach(k => out.add(k)); });
+  return out;
+}
+function selPointerDown(e, wrap) {
+  if (!selOn() || e.button !== 0) return false;
+  const td = e.target.closest(wrap.id === 'ltmWrap' ? 'td.k[data-l][data-c]' : 'td.c[data-t][data-l]'); if (!td) return false;
+  selDrag = { wrap, a: td, base: new Set(SEL), moved: false, add: !tdKeys(td).every(k => SEL.has(k)) };
+  e.preventDefault(); return true;
+}
+window.addEventListener('pointermove', e => {
+  if (!selDrag) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY); const td = el && el.closest(selDrag.wrap.id === 'ltmWrap' ? 'td.k[data-l][data-c]' : 'td.c[data-t][data-l]');
+  if (!td || !selDrag.wrap.contains(td)) return;
+  if (td !== selDrag.a) selDrag.moved = true; if (!selDrag.moved) return;
+  const R = rectKeys(selDrag.wrap, selDrag.a, td); const P = new Set(selDrag.base);
+  R.forEach(k => selDrag.add ? P.add(k) : P.delete(k)); selDrag.prev = P; markSel(P);
+  // auto-scroll near edges
+  const bx = selDrag.wrap.getBoundingClientRect();
+  if (e.clientX > bx.right - 30) selDrag.wrap.scrollLeft += 20; else if (e.clientX < bx.left + 90) selDrag.wrap.scrollLeft -= 20;
+});
+window.addEventListener('pointerup', () => {
+  if (!selDrag) return; const d = selDrag; selDrag = null;
+  if (d.moved && d.prev) { SEL = d.prev; selJustDragged = true; setTimeout(() => selJustDragged = false, 0); markSel(); }
+});
+function selClick(e, td) {
+  // returns true when the click was used for selection
+  if (selJustDragged) return true;
+  if (!(selOn() || e.ctrlKey || e.metaKey)) return false;
+  toggleKeys(tdKeys(td)); return true;
+}
+function openBulkDates() {
+  const items = [...SEL].map(findStateByKey).filter(Boolean);
+  if (!items.length) { toast('Select some cells first'); return; }
+  const byT = {}; items.forEach(s => (byT[s.t.name] = byT[s.t.name] || { t: s.t, list: [] }).list.push(s));
+  const groups = Object.values(byT).sort((a, b) => a.t.j - b.t.j);
+  const codes = tradeCodes(items[0].M);
+  const lvTxt = l => { const n = l.map(s => s.lv).reverse(); return n.length > 8 ? `L${n[0]} … L${n[n.length - 1]} (${n.length} floors)` : n.map(x => 'L' + x).join(', '); };
+  groups.forEach(g => g.list.sort((a, b) => a.li - b.li));
+  const ps = Math.min(...items.map(s => s.s)), pe = Math.max(...items.map(s => s.e));
+  const body = `
+   <div class="planbox"><div class="r"><span>Selected</span><b>${items.length} floor-trades</b></div><div class="r"><span>Planned span</span><span>${fdy(ps)} → ${fdy(pe)}</span></div></div>
+   <div class="fld"><label>Apply to these trades</label>${groups.map((g, i) => `<label class="bk-tr"><input type="checkbox" data-g="${i}" checked><span><code style="background:${g.t.color};color:#fff;font-weight:700;padding:0 4px;border-radius:3px;margin-right:6px;font-size:11.5px">${codes[g.t.name]}</code>${esc(g.t.name)}<br><span class="lv">${lvTxt(g.list)}</span></span></label>`).join('')}</div>
+   <div class="two"><div class="fld"><label>Actual start</label><input type="date" id="bAs"></div><div class="fld"><label>Actual finish</label><input type="date" id="bAe"></div></div>
+   <p class="hint">Leave a box empty to keep the dates already entered.</p>
+   <div class="fld"><label>How to apply</label>
+     <label class="bk-opt"><input type="radio" name="bMode" value="same" checked><span><b>Same dates on every floor</b><br><span class="muted">Every selected floor gets exactly these dates.</span></span></label>
+     <label class="bk-opt"><input type="radio" name="bMode" value="takt"><span><b>Follow the takt from these dates</b><br><span class="muted">The dates are for the earliest floor of each trade. Higher floors keep the planned gap between floors.</span></span></label></div>
+   <label class="bk-opt"><input type="checkbox" id="bDone" checked><span>Mark units complete wherever a finish date is set</span></label>
+   <div id="bPrev" class="muted" style="font-size:12.5px;margin-top:8px"></div>`;
+  const foot = `<button class="ibtn" id="bClear" title="Remove actual start and finish dates from the selected floor-trades">Clear actual dates</button><button class="ibtn pri" id="bApply">Apply to ${items.length}</button>`;
+  openDrawer('Set actual dates', `Blk ${items[0].M.blk} · ${items[0].M.kind === 'DU' ? 'Dwelling units' : 'Common area'}`, body, foot);
+  const pick = () => groups.filter((g, i) => $(`#drB [data-g="${i}"]`).checked);
+  const plan = () => {
+    const as = $('#bAs').value ? iso2s($('#bAs').value) : null, ae = $('#bAe').value ? iso2s($('#bAe').value) : null;
+    const takt = $('#drB input[name="bMode"]:checked').value === 'takt';
+    const out = [];
+    pick().forEach(g => { const s0 = Math.min(...g.list.map(s => s.s)), e0 = Math.min(...g.list.map(s => s.e));
+      g.list.forEach(s => out.push({ s, as: as == null ? null : as + (takt ? s.s - s0 : 0), ae: ae == null ? null : ae + (takt ? s.e - e0 : 0) })); });
+    return { out, as, ae, takt };
+  };
+  const preview = () => {
+    const { out, as, ae, takt } = plan(); const n = out.length;
+    $('#bApply').textContent = `Apply to ${n}`;
+    if (!n) { $('#bPrev').textContent = 'No trades ticked.'; return; }
+    if (as == null && ae == null) { $('#bPrev').textContent = 'Enter a start date, a finish date, or both.'; return; }
+    if (as != null && ae != null && ae < as) { $('#bPrev').innerHTML = '<span class="neg">Finish is before start.</span>'; return; }
+    if (!takt) { $('#bPrev').textContent = `${n} floor-trades will get ${as != null ? 'start ' + fdy(as) : ''}${as != null && ae != null ? ' and ' : ''}${ae != null ? 'finish ' + fdy(ae) : ''}.`; return; }
+    const f = out.map(o => o.as ?? o.ae); $('#bPrev').textContent = `${n} floor-trades, dates running from ${fdy(Math.min(...f))} to ${fdy(Math.max(...out.map(o => o.ae ?? o.as)))} following the planned takt.`;
+  };
+  $('#drB').oninput = preview; $('#drB').onchange = preview; preview();
+  $('#bApply').onclick = () => {
+    const { out, as, ae } = plan();
+    if (!out.length) { toast('Tick at least one trade'); return; }
+    if (as == null && ae == null) { toast('Enter a start or finish date'); $('#bAs').focus(); return; }
+    if (as != null && ae != null && ae < as) { toast('Finish is before start'); return; }
+    const done = $('#bDone').checked; const now = Date.now();
+    out.forEach(o => { const e = EDITS[o.s.key] || {}; if (o.as != null) e.as = s2iso(o.as); if (o.ae != null) { e.ae = s2iso(o.ae); if (done) e.d = o.s.tot; } e.t = now; EDITS[o.s.key] = e; });
+    saveEdits(); closeDrawer(); SEL.clear(); render(); toast(`Actual dates set on ${out.length} floor-trades`);
+  };
+  $('#bClear').onclick = () => {
+    const { out } = plan(); if (!out.length) return;
+    if (!confirm(`Remove actual start and finish dates from ${out.length} floor-trades? Unit tallies are kept.`)) return;
+    out.forEach(o => { const e = EDITS[o.s.key]; if (e) { delete e.as; delete e.ae; e.t = Date.now(); } });
+    saveEdits(); closeDrawer(); render(); toast(`Cleared actual dates on ${out.length} floor-trades`);
+  };
 }
 
 /* ============ FLOWLINE ============ */
@@ -1503,6 +1724,8 @@ function renderPPC(sel) {
 
 /* ============ DATA ============ */
 function renderData() {
+  if (document.activeElement !== $('#holList')) $('#holList').value = HOL_TXT;
+  const ly = holLastYear(); $('#holMsg').textContent = ly && ly < 2030 ? `Holidays listed up to ${ly}. Dates after that exclude Sundays only.` : '';
   let lv = 0, tr = 0;
   BLOCKS().forEach(b => { const M = blockModel(b, 'DU'); lv += M.levels.length; tr = Math.max(tr, M.trades.length); });
   $('#facts').innerHTML = `<dt>Source</dt><dd>${esc(PLAN.source || 'Archi & ME Progress.xlsx')}</dd><dt>Progress as at</dt><dd>${fdy(iso2s(PLAN.statusDate))}</dd><dt>Blocks</dt><dd>${BLOCKS().join(', ')}</dd><dt>Floors (DU)</dt><dd>${lv}</dd><dt>Trades per block</dt><dd>up to ${tr} (DU) + ${blockModel(UI.blk, 'CA') ? blockModel(UI.blk, 'CA').trades.length : 0} (CA)</dd><dt>Units edited here</dt><dd>${Object.values(EDITS).filter(e => e.d != null).length} floor-trades</dd><dt>Constraints</dt><dd>${LPS.cons.length} (${LPS.cons.filter(c => c.status === 'open').length} open)</dd><dt>Weeks planned</dt><dd>${Object.keys(LPS.weeks).length}</dd>`;
@@ -1661,7 +1884,8 @@ function openCell(key) {
   const body = `
    <div class="statusline" id="cStat">${statusPill(s)}</div>
    <div class="planbox">
-     <div class="r"><span>Planned</span><b>${fdy(s.s)} → ${fdy(s.e)} (${s.e - s.s} d)</b></div>
+     <div class="r"><span>Planned</span><b>${fdy(s.s)} → ${fdy(s.e)}</b></div>
+     <div class="r"><span>Cycle time</span><span><b>${workDays(s.s, s.e)} working days</b> <span class="muted">· ${s.e - s.s + 1} calendar days, excl. Sundays &amp; public holidays</span></span></div>
      <div class="r"><span>Sequence</span><span>#${t.j + 1} of ${M.trades.length} · ${PHASES[PHX[t.ph]].name}</span></div>
      <div class="r"><span>Hand-off</span><span style="text-align:right">${logicText(M, t)}</span></div>
      ${M.struct[s.li] ? `<div class="r"><span>Floor cast</span><span>${fdy(M.struct[s.li])}</span></div>` : ''}
@@ -1747,6 +1971,11 @@ $('#elevs').onclick = e => { const el = e.target.closest('[data-b]'); if (!el) r
 $('#elevs').ondblclick = e => { const el = e.target.closest('[data-b]'); if (!el) return; UI.blk = el.dataset.b; UI.kind = 'DU'; setView('matrix'); };
 $('#behindScope').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; UI.behind = b.dataset.s; saveUI(); renderOverview(); };
 $('#behindTbl').onclick = e => { const r = e.target.closest('tr[data-b]'); if (!r) return; UI.blk = r.dataset.b; UI.kind = 'DU'; mxHL = r.dataset.t; setView('matrix'); setTimeout(() => { const th = $('#mxWrap th.hl'); if (th) $('#mxWrap').scrollTo({ left: th.offsetLeft - 200, behavior: 'smooth' }); }, 50); };
+$('#mxCT input').onchange = e => { UI.mxCT = e.target.checked; saveUI(); renderMatrix(); };
+$('#holSave').onclick = () => { const txt = $('#holList').value; const { set, bad } = parseHol(txt);
+  if (bad.length) { $('#holMsg').innerHTML = `<span class="neg">Couldn't read: ${esc(bad.slice(0, 3).join(' · '))}</span>`; return; }
+  HOL_TXT = txt; HOL = null; LS.set('holidays', txt); $('#holMsg').textContent = `Saved ${set.size} non-working days. Cycle times updated.`; toast('Holidays saved'); };
+$('#holReset').onclick = () => { HOL_TXT = SG_HOL_DEFAULT; HOL = null; LS.set('holidays', null); $('#holList').value = HOL_TXT; $('#holMsg').textContent = 'Restored the MOM list for 2026–2027.'; };
 $('#mxShow').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; UI.mxShow = b.dataset.m; saveUI(); renderMatrix(); };
 $('#mxPhases').onclick = e => { const c = e.target.closest('[data-p]'); if (!c) return; UI.phOff[c.dataset.p] = !UI.phOff[c.dataset.p]; saveUI(); renderMatrix(); };
 $('#mxLateOnly input').onchange = renderMatrix;
@@ -1758,7 +1987,9 @@ $('#mxImpIn').onchange = e => { const f = e.target.files[0]; e.target.value = ''
   const n = Object.values(EDITS).filter(x => x.d != null).length;
   if (n && !confirm(`Load unit tallies from ${f.name}? The ${n} floor-trade counts entered in this app will be replaced by the file's values. Notes, dates, constraints and weekly plans are kept.`)) return;
   importWorkbook(f, { clear: true }); };
+$('#mxWrap').addEventListener('pointerdown', e => selPointerDown(e, $('#mxWrap')));
 $('#mxWrap').onclick = e => {
+  { const sc = e.target.closest('td.c[data-t][data-l]'); if (sc && selClick(e, sc)) return; }
   const th = e.target.closest('th.tr'); if (th) { openTrade(th.dataset.t); return; }
   const lvc = e.target.closest('td.lv'); if (lvc) { openLevel(+lvc.dataset.l); return; }
   const c = e.target.closest('td.c'); if (!c || c.classList.contains('na')) return;
@@ -1774,28 +2005,39 @@ $('#mxWrap').onmousemove = e => {
 };
 $('#mxWrap').onmouseleave = () => tip.style.display = 'none';
 $('#ltmRes').onclick = e => { const b = e.target.closest('[data-r]'); if (!b) return; UI.ltmRes = b.dataset.r; saveUI(); renderLTM(); };
-$('#ltmWin').onclick = e => { const b = e.target.closest('[data-w]'); if (!b) return; UI.ltmWin = +b.dataset.w; saveUI(); renderLTM(); };
+$('#ltmWin').onclick = e => { const b = e.target.closest('[data-w]'); if (!b) return;
+  if (b.dataset.w === 'c') { UI.ltmWin = 'c'; UI.ltmFrom = $('#ltmFrom').value || s2iso(wkStart(DD)); UI.ltmTo = $('#ltmTo').value || s2iso(wkStart(DD) + 83); ltmForceS = iso2s(UI.ltmFrom); }
+  else { UI.ltmWin = +b.dataset.w; ltmForceS = ltmLeftS; }
+  saveUI(); renderLTM(); };
 $('#ltmNav').onclick = e => { const b = e.target.closest('[data-d]'); if (!b) return; const w = $('#ltmWrap'), g = w._g; if (!g || !g.win) return;
+  if (g.win === 'c') { const sh = (+b.dataset.d) * g.visCols * g.step; UI.ltmFrom = s2iso(iso2s(UI.ltmFrom) + sh); UI.ltmTo = s2iso(iso2s(UI.ltmTo) + sh); saveUI(); ltmForceS = iso2s(UI.ltmFrom); renderLTM(); return; }
   const c0 = Math.round(w.scrollLeft / g.cw); const c = Math.max(0, c0 + (+b.dataset.d) * g.visCols);
   w.scrollTo({ left: c * g.cw, behavior: 'smooth' }); };
 $('#ltmWrap').addEventListener('scroll', () => { if (!ltmRAF) ltmRAF = requestAnimationFrame(() => { ltmRAF = 0; ltmRangeLabel(); }); }, { passive: true });
 let ltmRAF = 0, ltmDrag = null, ltmDragged = false;
-$('#ltmWrap').addEventListener('pointerdown', e => { if (e.button !== 0) return; ltmDrag = { x: e.clientX, l: $('#ltmWrap').scrollLeft }; ltmDragged = false; });
+$('#ltmWrap').addEventListener('pointerdown', e => { if (selPointerDown(e, $('#ltmWrap'))) return; if (e.button !== 0) return; ltmDrag = { x: e.clientX, l: $('#ltmWrap').scrollLeft }; ltmDragged = false; });
 window.addEventListener('pointermove', e => { if (!ltmDrag) return; const dx = e.clientX - ltmDrag.x; if (!ltmDragged && Math.abs(dx) < 6) return;
   ltmDragged = true; $('#ltmWrap').classList.add('drag'); $('#ltmWrap').scrollLeft = ltmDrag.l - dx; tip.style.display = 'none'; });
 window.addEventListener('pointerup', () => { if (!ltmDrag) return; ltmDrag = null; $('#ltmWrap').classList.remove('drag'); setTimeout(() => ltmDragged = false, 0); });
 let ltmRsz = 0;
 window.addEventListener('resize', () => { clearTimeout(ltmRsz); ltmRsz = setTimeout(() => { if (UI.view === 'ltm') renderLTM(); else if (UI.view === 'overview') renderKeyDates(); }, 150); });
+$$('.selBtn').forEach(b => b.onclick = () => { UI.selMode = !UI.selMode; saveUI(); selSync(); });
+$('#selSet').onclick = openBulkDates;
+$('#selClr').onclick = () => { SEL.clear(); markSel(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && SEL.size && !$('#drawer').classList.contains('open')) { SEL.clear(); markSel(); } });
+const ltmApplyRange = () => { let a = iso2s($('#ltmFrom').value), z = iso2s($('#ltmTo').value); if (a == null || z == null || isNaN(a) || isNaN(z)) return;
+  if (z < a) [a, z] = [z, a]; UI.ltmWin = 'c'; UI.ltmFrom = s2iso(a); UI.ltmTo = s2iso(z); saveUI(); ltmForceS = a; renderLTM(); };
+$('#ltmFrom').onchange = ltmApplyRange; $('#ltmTo').onchange = ltmApplyRange;
 $('#kdMode').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; UI.kdMode = b.dataset.m; saveUI(); renderKeyDates(); };
 $('#kdImp').onclick = () => $('#mxImpIn').click();
 $('#kdBody').onclick = e => { const r = e.target.closest('tr[data-b]'); if (!r) return; UI.blk = r.dataset.b; saveUI(); render(); };
 $('#ltmJump').onclick = () => ltmJump();
 $('#ltmCodes').onclick = e => { const s = e.target.closest('[data-t]'); if (!s) return; ltmHL = ltmHL === s.dataset.t ? null : s.dataset.t; renderLTM(); };
-$('#ltmWrap').onclick = e => { if (ltmDragged) return; const lv = e.target.closest('td.lv'); if (lv) { openLevel(+lv.dataset.l); return; } const c = e.target.closest('td.k[data-l]'); if (c) openLTMCell(+c.dataset.l, +c.dataset.c); };
+$('#ltmWrap').onclick = e => { if (ltmDragged) return; const c = e.target.closest('td.k[data-l]'); if (c && selClick(e, c)) return; const lv = e.target.closest('td.lv'); if (lv) { openLevel(+lv.dataset.l); return; } if (c) openLTMCell(+c.dataset.l, +c.dataset.c); };
 $('#ltmWrap').onmousemove = e => {
   const c = e.target.closest('td.k[data-l]'); if (!c) { tip.style.display = 'none'; return; }
   const g = $('#ltmWrap')._g; const L = g.grid[+c.dataset.l][+c.dataset.c]; const a = g.t0 + (+c.dataset.c) * g.step;
-  showTip(e, `<b>L${g.M.levels[+c.dataset.l]} · ${g.step === 7 ? 'wk of ' + fd(a) : fd(a)}</b>` + L.map(({ t, st }) => `${esc(t.name)}: ${st.done}/${st.tot}${st.late ? ' · behind' : ''}`).join('<br>'));
+  showTip(e, `<b>L${g.M.levels[+c.dataset.l]} · ${g.step === 7 ? 'wk of ' + fd(a) : fd(a)}</b>` + L.map(({ t, st }) => `${esc(t.name)}: ${st.done}/${st.tot} · plan ${fd(st.s)} – ${fd(st.e)}${st.late ? ' · behind' : ''}`).join('<br>'));
 };
 $('#ltmWrap').onmouseleave = () => tip.style.display = 'none';
 $('#flMode').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; UI.flMode = b.dataset.m; saveUI(); renderFlow(); };
